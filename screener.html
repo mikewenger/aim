@@ -15,7 +15,7 @@
   }
   body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.5; min-height: 100vh; }
 
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   header h1 { font-size: 20px; font-weight: 700; }
   header h1 span { color: var(--blue); }
   header .subtitle { color: var(--muted); font-size: 12px; }
@@ -23,7 +23,29 @@
   .back-link { color: var(--muted); font-size: 12px; text-decoration: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 5px; }
   .back-link:hover { color: var(--text); border-color: var(--blue); }
 
-  .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .page { max-width: 1260px; margin: 0 auto; padding: 24px; }
+
+  /* TRADING HOURS STATUS BAR */
+  .trading-bar { display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .trading-status { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+  .trading-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 1.5s infinite; }
+  .dot-closed { background: var(--muted); }
+  .dot-scanning { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .trading-time { font-size: 12px; color: var(--muted); margin-left: auto; font-family: monospace; }
+  .countdown { font-size: 12px; color: var(--yellow); font-family: monospace; }
+  .scan-count { font-size: 12px; color: var(--muted); }
+  .scan-count b { color: var(--text); }
+
+  /* AUTO-SCAN TOGGLE */
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .toggle { position: relative; width: 36px; height: 20px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: 0.2s; }
+  .toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: 0.2s; }
+  .toggle input:checked + .toggle-slider { background: var(--green-dim); border-color: var(--green); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--green); }
 
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
   .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
@@ -36,6 +58,7 @@
 
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
   .btn-primary { background: var(--blue); color: white; }
@@ -46,6 +69,16 @@
   .btn-danger { background: var(--red); color: white; }
   .btn-sm { padding: 4px 10px; font-size: 11px; }
 
+  /* PERFECT STOCK ALERT */
+  .perfect-alert { display: none; background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border: 2px solid var(--green); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
+  .perfect-alert .alert-title { font-size: 13px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .perfect-cards { display: flex; gap: 10px; flex-wrap: wrap; }
+  .perfect-card { background: var(--surface); border: 1px solid rgba(16,185,129,0.4); border-radius: 8px; padding: 12px 16px; min-width: 160px; cursor: pointer; transition: border-color 0.15s; }
+  .perfect-card:hover { border-color: var(--green); }
+  .perfect-card .pc-ticker { font-size: 18px; font-weight: 800; color: var(--green); }
+  .perfect-card .pc-name { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .perfect-card .pc-score { font-size: 11px; }
+
   /* PROGRESS */
   .progress-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: none; }
   .progress-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
@@ -54,11 +87,19 @@
   .progress-stats { display: flex; gap: 20px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
   .progress-stats b { color: var(--text); }
 
+  /* SCAN LOG */
+  .scan-log { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; display: none; max-height: 160px; overflow-y: auto; }
+  .scan-log-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; }
+  .log-entry { font-size: 12px; color: var(--muted); padding: 3px 0; border-bottom: 1px solid var(--border); display: flex; gap: 12px; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time { font-family: monospace; white-space: nowrap; color: var(--muted); }
+  .log-msg { color: var(--text); }
+  .log-perfect { color: var(--green); font-weight: 600; }
+  .log-warn { color: var(--yellow); }
+
   /* ALERT */
   .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
   .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
-  .alert-warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: var(--yellow); }
-  .alert-info { background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.3); color: var(--blue); }
 
   /* RESULTS */
   .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
@@ -66,8 +107,8 @@
   .results-count b { color: var(--text); }
 
   .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
-  th { background: var(--surface2); color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 8px 10px; text-align: right; white-space: nowrap; position: sticky; top: 0; cursor: pointer; user-select: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 980px; }
+  th { background: var(--surface2); color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 8px 10px; text-align: right; white-space: nowrap; position: sticky; top: 0; cursor: pointer; user-select: none; z-index: 2; }
   th:hover { color: var(--text); }
   th:first-child { text-align: left; }
   th .sort-icon { display: inline-block; margin-left: 4px; opacity: 0.4; }
@@ -75,8 +116,11 @@
   td { padding: 8px 10px; text-align: right; border-top: 1px solid var(--border); white-space: nowrap; }
   td:first-child { text-align: left; }
   tr:hover td { background: var(--surface2); }
+  tr.perfect-row td { background: rgba(16,185,129,0.05); }
+  tr.perfect-row:hover td { background: rgba(16,185,129,0.1); }
+  tr.new-row td { animation: fadeIn 0.6s ease; }
+  @keyframes fadeIn { from { background: rgba(59,130,246,0.15); } to {} }
 
-  /* AIM SCORE BAR */
   .score-wrap { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
   .score-bar { width: 60px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
   .score-fill { height: 100%; border-radius: 3px; }
@@ -89,6 +133,7 @@
   .tag-green { background: var(--green-dim); color: var(--green); }
   .tag-red { background: var(--red-dim); color: var(--red); }
   .tag-muted { background: var(--surface2); color: var(--muted); }
+  .tag-new { background: rgba(59,130,246,0.2); color: var(--blue); }
 
   .up { color: var(--green); }
   .down { color: var(--red); }
@@ -100,12 +145,9 @@
   .load-btn { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .load-btn:hover { background: rgba(16,185,129,0.2); }
 
-  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
-
-  /* CRITERIA LEGEND */
   .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
   .legend span { display: flex; align-items: center; gap: 5px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-sm { width: 8px; height: 8px; border-radius: 50%; }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -117,25 +159,51 @@
 <header>
   <div>
     <h1>AIM <span>Screener</span></h1>
-    <div class="subtitle">Lichello-Compatible Stock Finder · Powered by Massive</div>
+    <div class="subtitle">Lichello-Compatible Stock Finder · Massive Real-Time Feed · 7am–8pm EST</div>
   </div>
   <a href="index.html" class="back-link">← AIM Tracker</a>
-  <span class="badge">v1.0</span>
+  <span class="badge">v2.0</span>
 </header>
 
 <div class="page">
 
+  <!-- TRADING HOURS STATUS BAR -->
+  <div class="trading-bar">
+    <div class="trading-status">
+      <div class="trading-dot dot-closed" id="tradingDot"></div>
+      <span id="tradingStatus">Checking trading hours...</span>
+    </div>
+    <div class="toggle-wrap">
+      <label class="toggle">
+        <input type="checkbox" id="autoScanToggle" onchange="toggleAutoScan()">
+        <span class="toggle-slider"></span>
+      </label>
+      <span id="autoScanLabel">Auto-scan OFF</span>
+    </div>
+    <div class="field" style="margin:0;min-width:140px">
+      <select id="scanInterval" style="padding:4px 8px;font-size:12px">
+        <option value="15">Every 15 min</option>
+        <option value="30" selected>Every 30 min</option>
+        <option value="60">Every 1 hour</option>
+        <option value="120">Every 2 hours</option>
+      </select>
+    </div>
+    <div class="countdown" id="countdownDisplay" style="display:none"></div>
+    <div class="scan-count" id="scanCountDisplay"></div>
+    <div class="trading-time" id="estClock"></div>
+  </div>
+
   <!-- CONFIG CARD -->
   <div class="card">
-    <div class="card-title">Screener Configuration</div>
+    <div class="card-title">Configuration</div>
     <div class="grid-2" style="margin-bottom:14px">
       <div class="field">
         <label>Massive API Key</label>
         <input type="password" id="apiKey" placeholder="Enter your Massive API key...">
-        <div class="hint">Your key is never stored or sent anywhere except Massive's API</div>
+        <div class="hint">Never stored — only used for live API calls</div>
       </div>
       <div class="field">
-        <label>Exchange Filter</label>
+        <label>Exchange</label>
         <select id="exchangeFilter">
           <option value="">All Major Exchanges (NYSE + NASDAQ)</option>
           <option value="XNYS">NYSE only</option>
@@ -144,7 +212,7 @@
       </div>
     </div>
 
-    <div style="margin-bottom:6px"><div class="card-title" style="margin-bottom:10px">Lichello Filter Criteria</div></div>
+    <div class="card-title" style="margin-bottom:10px">Lichello Filter Criteria</div>
     <div class="grid-3" style="margin-bottom:16px">
       <div class="field">
         <label>Market Cap Min ($M)</label>
@@ -159,38 +227,71 @@
         <input type="number" id="volMin" value="200000" step="10000">
       </div>
       <div class="field">
-        <label>Min Intraday Range % (Volatility)</label>
+        <label>Min Intraday Volatility %</label>
         <input type="number" id="rangeMin" value="1.5" step="0.5">
-        <div class="hint">AIM needs stocks that swing — (H-L)/L × 100</div>
+        <div class="hint">(H−L)/L × 100 — AIM needs swings</div>
       </div>
       <div class="field">
         <label>Min Revenue Growth YoY %</label>
         <input type="number" id="revGrowthMin" value="0" step="5">
-        <div class="hint">0 = profitable growth required</div>
       </div>
       <div class="field">
         <label>Max Debt / Equity Ratio</label>
         <input type="number" id="debtMax" value="2.0" step="0.1">
-        <div class="hint">Lower debt = more durable per Lichello</div>
+        <div class="hint">Lichello: low debt = stock recovers from dips</div>
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;align-items:center">
-      <button class="btn btn-primary" id="runBtn" onclick="runScreener()">▶ Run Screener</button>
-      <button class="btn btn-danger" id="stopBtn" onclick="stopScreener()" style="display:none">■ Stop</button>
-      <button class="btn btn-secondary" onclick="clearResults()">Clear</button>
-      <div class="legend" style="margin-left:8px">
-        <span><span class="dot" style="background:var(--green)"></span> A — Strong AIM fit</span>
-        <span><span class="dot" style="background:#84cc16"></span> B — Good fit</span>
-        <span><span class="dot" style="background:var(--yellow)"></span> C — Marginal</span>
-        <span><span class="dot" style="background:var(--red)"></span> D — Weak</span>
+    <div class="card-title" style="margin-bottom:10px">Perfect Stock Threshold</div>
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="field">
+        <label>Min AIM Score to Alert</label>
+        <input type="number" id="perfectThreshold" value="80" min="50" max="100" step="5">
+        <div class="hint">Triggers alert + browser notification</div>
+      </div>
+      <div class="field">
+        <label>Not At 52-Wk High</label>
+        <select id="avoid52High">
+          <option value="1">Yes — avoid stocks at highs</option>
+          <option value="0">No — show all</option>
+        </select>
+        <div class="hint">Lichello: buy a strong company on its knees</div>
+      </div>
+      <div class="field">
+        <label>Min Profit Margin %</label>
+        <input type="number" id="marginMin" value="0" step="1">
+      </div>
+      <div class="field">
+        <label>Sound Alert</label>
+        <select id="soundAlert">
+          <option value="1">On — beep when perfect stock found</option>
+          <option value="0">Off</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="runBtn" onclick="runScreener()">▶ Scan Now</button>
+      <button class="btn btn-danger btn-sm" id="stopBtn" onclick="stopScreener()" style="display:none">■ Stop</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearResults()">Clear</button>
+      <button class="btn btn-secondary btn-sm" onclick="requestNotifyPermission()">🔔 Enable Notifications</button>
+      <div class="legend">
+        <span><span class="dot-sm" style="background:var(--green)"></span> A ≥ 75</span>
+        <span><span class="dot-sm" style="background:#84cc16"></span> B 55–74</span>
+        <span><span class="dot-sm" style="background:var(--yellow)"></span> C 35–54</span>
+        <span><span class="dot-sm" style="background:var(--red)"></span> D &lt; 35</span>
       </div>
     </div>
   </div>
 
+  <!-- PERFECT STOCK ALERT -->
+  <div class="perfect-alert" id="perfectAlert">
+    <div class="alert-title">⚡ Lichello Perfect Stock Candidates</div>
+    <div class="perfect-cards" id="perfectCards"></div>
+  </div>
+
   <!-- ERROR -->
   <div class="alert alert-error" id="errorAlert"></div>
-  <div class="alert alert-warn" id="warnAlert"></div>
 
   <!-- PROGRESS -->
   <div class="progress-wrap" id="progressWrap">
@@ -199,12 +300,19 @@
     <div class="progress-stats" id="progressStats"></div>
   </div>
 
+  <!-- SCAN LOG -->
+  <div class="scan-log" id="scanLog">
+    <div class="scan-log-title">Scan History</div>
+    <div id="scanLogEntries"></div>
+  </div>
+
   <!-- RESULTS -->
   <div id="resultsSection" style="display:none">
     <div class="results-header">
       <div class="results-count" id="resultsCount"></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="lastScanTime" style="font-size:12px;color:var(--muted)"></span>
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ CSV</button>
       </div>
     </div>
     <div class="table-wrap">
@@ -214,13 +322,14 @@
             <th onclick="sortBy('ticker')" data-col="ticker">Ticker <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('aimScore')" data-col="aimScore">AIM Score <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('marketCap')" data-col="marketCap">Mkt Cap <span class="sort-icon">↕</span></th>
-            <th onclick="sortBy('volume')" data-col="volume">Avg Volume <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('volume')" data-col="volume">Volume <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('volatility')" data-col="volatility">Volatility % <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('price')" data-col="price">Price <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('changePerc')" data-col="changePerc">Day % <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('revenueGrowth')" data-col="revenueGrowth">Rev Growth <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('debtEquity')" data-col="debtEquity">D/E <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('pe')" data-col="pe">P/E <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('profitMargin')" data-col="profitMargin">Margin % <span class="sort-icon">↕</span></th>
             <th>Load</th>
           </tr>
         </thead>
@@ -233,21 +342,160 @@
 
 <script>
 // ============================================================
-// MASSIVE API CONFIG
+// CONSTANTS
 // ============================================================
 const BASE = 'https://api.massive.com';
+const TRADING_START_H = 7;   // 7am EST
+const TRADING_END_H   = 20;  // 8pm EST
 
-let aborted = false;
-let allResults = [];
-let sortCol = 'aimScore';
-let sortDir = -1; // -1 = desc
+// ============================================================
+// STATE
+// ============================================================
+let aborted        = false;
+let allResults     = [];
+let prevTickers    = new Set();
+let sortCol        = 'aimScore';
+let sortDir        = -1;
+let autoScanTimer  = null;
+let countdownTimer = null;
+let scanCount      = 0;
+let nextScanAt     = null;
 
-function apiHeaders() {
-  const key = document.getElementById('apiKey').value.trim();
-  return { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' };
+// ============================================================
+// TRADING HOURS CLOCK
+// ============================================================
+function estNow() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function isInTradingHours() {
+  const now = estNow();
+  const h = now.getHours() + now.getMinutes() / 60;
+  return h >= TRADING_START_H && h < TRADING_END_H;
+}
+
+function updateClock() {
+  const now = estNow();
+  document.getElementById('estClock').textContent =
+    now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) + ' EST';
+
+  const inHours = isInTradingHours();
+  const scanning = document.getElementById('runBtn').disabled;
+  const dot = document.getElementById('tradingDot');
+  const status = document.getElementById('tradingStatus');
+
+  dot.className = 'trading-dot ' + (scanning ? 'dot-scanning' : inHours ? 'dot-live' : 'dot-closed');
+  status.textContent = scanning ? 'Scanning...' : inHours ? 'Market Window Open (7am–8pm EST)' : 'Outside Trading Window';
+  status.style.color = scanning ? 'var(--yellow)' : inHours ? 'var(--green)' : 'var(--muted)';
+
+  if (nextScanAt && !scanning) {
+    const secsLeft = Math.max(0, Math.round((nextScanAt - Date.now()) / 1000));
+    const m = Math.floor(secsLeft / 60);
+    const s = secsLeft % 60;
+    document.getElementById('countdownDisplay').textContent =
+      `Next scan in ${m}:${String(s).padStart(2,'0')}`;
+    document.getElementById('countdownDisplay').style.display = 'block';
+  } else {
+    document.getElementById('countdownDisplay').style.display = 'none';
+  }
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============================================================
+// AUTO-SCAN
+// ============================================================
+function toggleAutoScan() {
+  const on = document.getElementById('autoScanToggle').checked;
+  document.getElementById('autoScanLabel').textContent = on ? 'Auto-scan ON' : 'Auto-scan OFF';
+
+  if (on) {
+    if (!document.getElementById('apiKey').value.trim()) {
+      alert('Enter your Massive API key first.');
+      document.getElementById('autoScanToggle').checked = false;
+      document.getElementById('autoScanLabel').textContent = 'Auto-scan OFF';
+      return;
+    }
+    scheduleNextScan();
+    if (isInTradingHours()) runScreener();
+  } else {
+    clearAutoScan();
+  }
+}
+
+function scheduleNextScan() {
+  clearAutoScan();
+  const intervalMs = parseInt(document.getElementById('scanInterval').value) * 60 * 1000;
+  nextScanAt = Date.now() + intervalMs;
+  autoScanTimer = setTimeout(() => {
+    if (isInTradingHours()) {
+      runScreener().then(() => {
+        if (document.getElementById('autoScanToggle').checked) scheduleNextScan();
+      });
+    } else {
+      addLog('Outside trading hours (7am–8pm EST) — scan skipped.', 'warn');
+      if (document.getElementById('autoScanToggle').checked) scheduleNextScan();
+    }
+  }, intervalMs);
+}
+
+function clearAutoScan() {
+  if (autoScanTimer) { clearTimeout(autoScanTimer); autoScanTimer = null; }
+  nextScanAt = null;
+}
+
+// ============================================================
+// BROWSER NOTIFICATIONS
+// ============================================================
+async function requestNotifyPermission() {
+  if (!('Notification' in window)) { alert('Browser notifications not supported.'); return; }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') addLog('Browser notifications enabled.', 'info');
+  else addLog('Notification permission denied.', 'warn');
+}
+
+function sendNotification(title, body) {
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '' });
+  }
+}
+
+function beep() {
+  if (document.getElementById('soundAlert').value !== '1') return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.35);
+      osc.start(ctx.currentTime + i * 0.18);
+      osc.stop(ctx.currentTime + i * 0.18 + 0.35);
+    });
+  } catch(e) {}
+}
+
+// ============================================================
+// SCAN LOG
+// ============================================================
+function addLog(msg, type = 'info') {
+  const log = document.getElementById('scanLog');
+  const entries = document.getElementById('scanLogEntries');
+  log.style.display = 'block';
+
+  const now = estNow().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type === 'perfect' ? 'log-perfect' : type === 'warn' ? 'log-warn' : ''}">${msg}</span>`;
+  entries.insertBefore(div, entries.firstChild);
+
+  // Keep last 50 entries
+  while (entries.children.length > 50) entries.removeChild(entries.lastChild);
+}
 
 // ============================================================
 // PROGRESS HELPERS
@@ -259,101 +507,73 @@ function showProgress(label, pct, stats = '') {
   document.getElementById('progressFill').style.width = pct + '%';
   document.getElementById('progressStats').innerHTML = stats;
 }
-
-function hideProgress() {
-  document.getElementById('progressWrap').style.display = 'none';
-}
-
+function hideProgress() { document.getElementById('progressWrap').style.display = 'none'; }
 function showError(msg) {
   const el = document.getElementById('errorAlert');
-  el.textContent = msg;
-  el.style.display = 'block';
+  el.textContent = msg; el.style.display = 'block';
 }
-
-function hideError() {
-  document.getElementById('errorAlert').style.display = 'none';
-  document.getElementById('warnAlert').style.display = 'none';
-}
+function hideError() { document.getElementById('errorAlert').style.display = 'none'; }
 
 // ============================================================
-// AIM SCORE ALGORITHM
-// Based on Lichello's criteria: volatility, durability, growth
+// AIM SCORE — Lichello's criteria weighted
 // ============================================================
 function calcAIMScore(stock) {
   let score = 0;
 
-  // Volatility (40 pts) — AIM's engine, must swing to profit
-  // Use intraday range % as proxy
-  const vol = stock.volatility || 0;
-  if (vol >= 5)       score += 40;
-  else if (vol >= 3)  score += 32;
-  else if (vol >= 2)  score += 22;
-  else if (vol >= 1)  score += 12;
-  else                score += 0;
+  // Volatility (40 pts) — AIM's primary engine
+  const v = stock.volatility || 0;
+  score += v >= 5 ? 40 : v >= 3 ? 32 : v >= 2 ? 22 : v >= 1 ? 12 : 0;
 
-  // Revenue Growth (25 pts) — Lichello: growing companies recover faster
+  // Revenue Growth (25 pts) — fast-growing companies recover quicker
   const rg = stock.revenueGrowth;
-  if (rg !== null && rg !== undefined) {
-    if (rg >= 20)      score += 25;
-    else if (rg >= 10) score += 20;
-    else if (rg >= 0)  score += 12;
-    else               score += 0;
-  } else {
-    score += 8; // unknown — partial credit
-  }
+  if (rg != null) score += rg >= 20 ? 25 : rg >= 10 ? 20 : rg >= 0 ? 12 : 0;
+  else score += 8;
 
-  // Debt / Equity (20 pts) — Lichello: low debt = durable = recovers from dips
+  // Debt / Equity (20 pts) — durable = survives dips to let AIM buy cheap
   const de = stock.debtEquity;
-  if (de !== null && de !== undefined) {
-    if (de <= 0.3)     score += 20;
-    else if (de <= 0.8) score += 15;
-    else if (de <= 1.5) score += 8;
-    else if (de <= 2.0) score += 3;
-    else               score += 0;
-  } else {
-    score += 8;
-  }
+  if (de != null) score += de <= 0.3 ? 20 : de <= 0.8 ? 15 : de <= 1.5 ? 8 : de <= 2.0 ? 3 : 0;
+  else score += 8;
 
-  // Profitability (10 pts) — positive PE = real earnings
+  // Profitability (10 pts) — real earnings, not speculation
   const pe = stock.pe;
-  if (pe !== null && pe !== undefined && pe > 0 && pe < 80) score += 10;
-  else if (pe !== null && pe !== undefined && pe > 0)       score += 5;
+  if (pe != null && pe > 0 && pe < 80) score += 10;
+  else if (pe != null && pe > 0)       score += 5;
 
-  // Volume above floor (5 pts) — must be liquid enough for AIM to execute
-  if (stock.volume >= 500000) score += 5;
-  else if (stock.volume >= 200000) score += 3;
+  // Liquid enough for AIM to execute trades (5 pts)
+  score += stock.volume >= 500000 ? 5 : stock.volume >= 200000 ? 3 : 0;
 
   return Math.min(score, 100);
 }
 
 function scoreGrade(s) {
-  if (s >= 75) return 'A';
-  if (s >= 55) return 'B';
-  if (s >= 35) return 'C';
-  return 'D';
+  return s >= 75 ? 'A' : s >= 55 ? 'B' : s >= 35 ? 'C' : 'D';
 }
 
 // ============================================================
-// FETCH HELPERS
+// API HELPERS
 // ============================================================
+function apiHeaders() {
+  return { 'Authorization': `Bearer ${document.getElementById('apiKey').value.trim()}` };
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 async function fetchJSON(url) {
   const res = await fetch(url, { headers: apiHeaders() });
-  if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText} (${url})`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
   return res.json();
 }
 
-// Batch fetch with concurrency limit and abort support
-async function batchFetch(items, fetchFn, batchSize = 20, delayMs = 150, onBatch) {
-  const results = [];
-  for (let i = 0; i < items.length; i += batchSize) {
+async function batchFetch(items, fn, size = 20, delay = 120, onProgress) {
+  const out = [];
+  for (let i = 0; i < items.length; i += size) {
     if (aborted) break;
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(item => fetchFn(item).catch(() => null)));
-    results.push(...batchResults);
-    if (onBatch) onBatch(i + batch.length, items.length);
-    if (i + batchSize < items.length) await sleep(delayMs);
+    const batch = items.slice(i, i + size);
+    const results = await Promise.all(batch.map(item => fn(item).catch(() => null)));
+    out.push(...results);
+    if (onProgress) onProgress(Math.min(i + size, items.length), items.length);
+    if (i + size < items.length) await sleep(delay);
   }
-  return results;
+  return out;
 }
 
 // ============================================================
@@ -365,250 +585,281 @@ async function runScreener() {
 
   hideError();
   aborted = false;
-  allResults = [];
-
   document.getElementById('runBtn').disabled = true;
   document.getElementById('stopBtn').style.display = 'inline-flex';
-  document.getElementById('resultsSection').style.display = 'none';
 
-  const mcMin = parseFloat(document.getElementById('mcMin').value) * 1e6;
-  const mcMax = parseFloat(document.getElementById('mcMax').value) * 1e6;
-  const volMin = parseInt(document.getElementById('volMin').value);
-  const rangeMin = parseFloat(document.getElementById('rangeMin').value);
-  const revMin = parseFloat(document.getElementById('revGrowthMin').value);
-  const debtMax = parseFloat(document.getElementById('debtMax').value);
+  const mcMin       = parseFloat(document.getElementById('mcMin').value) * 1e6;
+  const mcMax       = parseFloat(document.getElementById('mcMax').value) * 1e6;
+  const volMin      = parseInt(document.getElementById('volMin').value);
+  const rangeMin    = parseFloat(document.getElementById('rangeMin').value);
+  const revMin      = parseFloat(document.getElementById('revGrowthMin').value);
+  const debtMax     = parseFloat(document.getElementById('debtMax').value);
+  const marginMin   = parseFloat(document.getElementById('marginMin').value);
+  const threshold   = parseInt(document.getElementById('perfectThreshold').value);
+  const avoid52High = document.getElementById('avoid52High').value === '1';
+
+  const scanStart = Date.now();
+  scanCount++;
+  document.getElementById('scanCountDisplay').innerHTML = `Scan <b>#${scanCount}</b>`;
+  addLog(`Scan #${scanCount} started — market cap $${mcMin/1e6}M–$${mcMax/1e6}M, vol ≥ ${volMin.toLocaleString()}`);
 
   try {
     // ── STEP 1: Full market snapshot ────────────────────────
-    showProgress('Step 1 of 3 — Fetching full market snapshot...', 5,
-      '<span>Pulling all US tickers from Massive...</span>');
+    showProgress('Step 1 / 3 — Fetching market snapshot...', 5, 'Pulling all US tickers from Massive...');
 
-    const snapUrl = `${BASE}/v2/snapshot/locale/us/markets/stocks/tickers?include_otc=false`;
-    const snapData = await fetchJSON(snapUrl);
-
-    if (!snapData.tickers || !snapData.tickers.length) {
-      throw new Error('No snapshot data returned. Market may be closed or API key invalid.');
-    }
-
-    // Filter by today's volume
-    const volFiltered = snapData.tickers.filter(t => {
-      const v = t.day?.v || t.min?.av || 0;
-      return v >= volMin;
-    });
-
-    showProgress('Step 1 of 3 — Snapshot received', 12,
-      `<span>Total tickers: <b>${snapData.tickers.length.toLocaleString()}</b></span>
-       <span>Volume ≥ ${volMin.toLocaleString()}: <b>${volFiltered.length.toLocaleString()}</b></span>`);
-
-    if (aborted) return done();
-
-    await sleep(300);
-
-    // ── STEP 2: Ticker details for market cap ───────────────
-    showProgress('Step 2 of 3 — Fetching ticker details for market cap filter...', 15,
-      `<span>Processing <b>${volFiltered.length.toLocaleString()}</b> tickers in batches of 20...</span>`);
+    const snapData = await fetchJSON(`${BASE}/v2/snapshot/locale/us/markets/stocks/tickers?include_otc=false`);
+    if (!snapData.tickers?.length) throw new Error('No snapshot data. Market may be closed or API key invalid.');
 
     const snapMap = {};
     snapData.tickers.forEach(t => { snapMap[t.ticker] = t; });
 
-    const marketCapFiltered = [];
-    const nameMap = {};
+    const volFiltered = snapData.tickers.filter(t => (t.day?.v || t.min?.av || 0) >= volMin);
+
+    showProgress('Step 1 / 3 — Snapshot received', 12,
+      `<span>Total tickers: <b>${snapData.tickers.length.toLocaleString()}</b></span>
+       <span>Volume ≥ ${volMin.toLocaleString()}: <b>${volFiltered.length.toLocaleString()}</b></span>`);
+
+    if (aborted) return finish();
+    await sleep(200);
+
+    // ── STEP 2: Ticker details → market cap filter ──────────
+    const capFiltered = [];
 
     await batchFetch(
       volFiltered,
-      async (t) => {
-        const data = await fetchJSON(`${BASE}/v3/reference/tickers/${t.ticker}`);
-        return { ticker: t.ticker, detail: data.results };
+      async t => {
+        const d = await fetchJSON(`${BASE}/v3/reference/tickers/${t.ticker}`);
+        return { ticker: t.ticker, detail: d.results };
       },
       20, 120,
       (done, total) => {
         const pct = 15 + (done / total) * 45;
-        showProgress('Step 2 of 3 — Filtering by market cap ($' +
-          (mcMin/1e6).toFixed(0) + 'M – $' + (mcMax/1e6).toFixed(0) + 'M)...', pct,
+        showProgress('Step 2 / 3 — Filtering by market cap...', pct,
           `<span>Checked: <b>${done.toLocaleString()} / ${total.toLocaleString()}</b></span>
-           <span>Passed cap filter: <b>${marketCapFiltered.length}</b></span>`);
+           <span>Passed: <b>${capFiltered.length}</b></span>`);
       }
     ).then(details => {
-      details.forEach((d, i) => {
-        if (!d || !d.detail) return;
+      details.forEach(d => {
+        if (!d?.detail) return;
         const mc = d.detail.market_cap;
-        if (mc >= mcMin && mc <= mcMax) {
-          const snap = snapMap[d.ticker];
-          const dayH = snap?.day?.h || snap?.prevDay?.h || 0;
-          const dayL = snap?.day?.l || snap?.prevDay?.l || 0;
-          const dayC = snap?.day?.c || snap?.lastTrade?.p || 0;
-          const dayV = snap?.day?.v || snap?.min?.av || 0;
-          const volatility = dayL > 0 ? ((dayH - dayL) / dayL) * 100 : 0;
+        if (!mc || mc < mcMin || mc > mcMax) return;
 
-          if (volatility >= rangeMin) {
-            marketCapFiltered.push({
-              ticker: d.ticker,
-              name: d.detail.name || d.ticker,
-              marketCap: mc,
-              price: dayC,
-              volume: dayV,
-              volatility: parseFloat(volatility.toFixed(2)),
-              changePerc: snap?.todaysChangePerc || 0,
-              revenueGrowth: null,
-              debtEquity: null,
-              pe: null,
-              aimScore: 0,
-            });
-            nameMap[d.ticker] = d.detail.name || d.ticker;
-          }
-        }
+        const snap  = snapMap[d.ticker];
+        const dayH  = snap?.day?.h || snap?.prevDay?.h || 0;
+        const dayL  = snap?.day?.l || snap?.prevDay?.l || 0;
+        const dayC  = snap?.day?.c || snap?.lastTrade?.p || 0;
+        const dayV  = snap?.day?.v || snap?.min?.av || 0;
+        const vol52h = d.detail.week_52_high || null;
+        const volatility = dayL > 0 ? ((dayH - dayL) / dayL) * 100 : 0;
+
+        // Avoid 52-week highs (Lichello: buy strong company at low price)
+        if (avoid52High && vol52h && dayC >= vol52h * 0.97) return;
+
+        if (volatility < rangeMin) return;
+
+        capFiltered.push({
+          ticker:        d.ticker,
+          name:          d.detail.name || d.ticker,
+          marketCap:     mc,
+          price:         dayC,
+          volume:        dayV,
+          volatility:    parseFloat(volatility.toFixed(2)),
+          changePerc:    snap?.todaysChangePerc || 0,
+          week52High:    vol52h,
+          revenueGrowth: null,
+          debtEquity:    null,
+          pe:            null,
+          profitMargin:  null,
+          aimScore:      0,
+          isNew:         !prevTickers.has(d.ticker),
+        });
       });
     });
 
-    if (aborted) return done();
-
-    if (!marketCapFiltered.length) {
-      showProgress('Complete', 100, '');
+    if (aborted) return finish();
+    if (!capFiltered.length) {
       hideProgress();
-      showError('No stocks passed the market cap and volatility filters. Try relaxing the criteria.');
-      return done();
+      addLog('No stocks passed market cap + volatility filter.', 'warn');
+      return finish();
     }
 
-    showProgress('Step 3 of 3 — Fetching fundamentals...', 62,
-      `<span>Cap + volatility filter passed: <b>${marketCapFiltered.length}</b></span>
-       <span>Fetching ratios for each...</span>`);
+    // ── STEP 3: Fundamentals ────────────────────────────────
+    showProgress('Step 3 / 3 — Fetching fundamentals...', 62,
+      `<span>Cap + volatility passed: <b>${capFiltered.length}</b></span>`);
 
-    // ── STEP 3: Fundamentals / ratios ───────────────────────
     await batchFetch(
-      marketCapFiltered,
-      async (stock) => {
-        const data = await fetchJSON(`${BASE}/v1/stocks/fundamentals/ratios/${stock.ticker}`);
-        return { ticker: stock.ticker, ratios: data.results || data };
+      capFiltered,
+      async stock => {
+        const d = await fetchJSON(`${BASE}/v1/stocks/fundamentals/ratios/${stock.ticker}`);
+        return { ticker: stock.ticker, ratios: d.results || d };
       },
       20, 120,
       (done, total) => {
-        const pct = 62 + (done / total) * 30;
-        showProgress('Step 3 of 3 — Loading fundamentals...', pct,
-          `<span>Fundamentals fetched: <b>${done} / ${total}</b></span>`);
+        showProgress('Step 3 / 3 — Loading fundamentals...', 62 + (done / total) * 30,
+          `<span>Fundamentals: <b>${done} / ${total}</b></span>`);
       }
     ).then(ratioResults => {
       const ratioMap = {};
-      ratioResults.forEach(r => {
-        if (r && r.ratios) ratioMap[r.ticker] = r.ratios;
-      });
+      ratioResults.forEach(r => { if (r?.ratios) ratioMap[r.ticker] = r.ratios; });
 
-      marketCapFiltered.forEach(stock => {
-        const r = ratioMap[stock.ticker];
+      capFiltered.forEach(s => {
+        const r = ratioMap[s.ticker];
         if (r) {
-          stock.revenueGrowth = r.revenue_growth_yoy != null ? parseFloat((r.revenue_growth_yoy * 100).toFixed(1)) : null;
-          stock.debtEquity    = r.debt_to_equity   != null ? parseFloat(r.debt_to_equity.toFixed(2))           : null;
-          stock.pe            = r.pe_ratio          != null ? parseFloat(r.pe_ratio.toFixed(1))                 : null;
-          stock.profitMargin  = r.profit_margin     != null ? parseFloat((r.profit_margin * 100).toFixed(1))    : null;
+          s.revenueGrowth = r.revenue_growth_yoy != null ? parseFloat((r.revenue_growth_yoy * 100).toFixed(1)) : null;
+          s.debtEquity    = r.debt_to_equity     != null ? parseFloat(r.debt_to_equity.toFixed(2))             : null;
+          s.pe            = r.pe_ratio            != null ? parseFloat(r.pe_ratio.toFixed(1))                   : null;
+          s.profitMargin  = r.profit_margin       != null ? parseFloat((r.profit_margin * 100).toFixed(1))      : null;
         }
-
-        // Apply fundamental filters
-        const rgOk = stock.revenueGrowth === null || stock.revenueGrowth >= revMin;
-        const deOk = stock.debtEquity === null || stock.debtEquity <= debtMax;
-        stock._pass = rgOk && deOk;
-        stock.aimScore = calcAIMScore(stock);
+        // Fundamental filters
+        const rgOk = s.revenueGrowth == null || s.revenueGrowth >= revMin;
+        const deOk = s.debtEquity    == null || s.debtEquity    <= debtMax;
+        const mgOk = s.profitMargin  == null || s.profitMargin  >= marginMin;
+        s._pass = rgOk && deOk && mgOk;
+        s.aimScore = calcAIMScore(s);
       });
     });
 
-    // Final filter and sort
-    allResults = marketCapFiltered
-      .filter(s => s._pass !== false)
-      .sort((a, b) => b.aimScore - a.aimScore);
+    // Final filtered + scored list
+    const passed = capFiltered.filter(s => s._pass !== false);
+    const elapsed = ((Date.now() - scanStart) / 1000).toFixed(1);
 
-    showProgress('Complete', 100,
-      `<span>Final candidates: <b>${allResults.length}</b></span>`);
+    // Update prev tickers set
+    prevTickers = new Set(passed.map(s => s.ticker));
+    allResults  = passed.sort((a, b) => b.aimScore - a.aimScore);
 
-    await sleep(400);
+    // Perfect stock candidates
+    const perfect = allResults.filter(s => s.aimScore >= threshold);
+
     hideProgress();
     renderResults();
+    renderPerfectAlert(perfect, threshold);
 
-  } catch (err) {
+    document.getElementById('lastScanTime').textContent = `Last scan: ${estNow().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true})} EST`;
+
+    addLog(`Scan #${scanCount} complete — ${passed.length} candidates in ${elapsed}s. ` +
+           (perfect.length ? `${perfect.length} perfect stock(s) found!` : 'No perfect stocks this scan.'),
+           perfect.length ? 'perfect' : 'info');
+
+    if (perfect.length) {
+      beep();
+      sendNotification('⚡ AIM Perfect Stock Found!',
+        perfect.slice(0,3).map(s => `${s.ticker} (${s.aimScore}/100)`).join(', '));
+    }
+
+  } catch(err) {
     hideProgress();
     showError('Screener error: ' + err.message);
+    addLog('Error: ' + err.message, 'warn');
     console.error(err);
   }
 
-  done();
+  finish();
 }
 
-function done() {
+function finish() {
   document.getElementById('runBtn').disabled = false;
   document.getElementById('stopBtn').style.display = 'none';
+  updateClock();
 }
 
-function stopScreener() {
-  aborted = true;
-  hideProgress();
-  done();
-}
+function stopScreener() { aborted = true; hideProgress(); finish(); }
 
 function clearResults() {
-  allResults = [];
+  allResults = []; prevTickers = new Set();
   document.getElementById('resultsSection').style.display = 'none';
-  hideError();
-  hideProgress();
+  document.getElementById('perfectAlert').style.display = 'none';
+  hideError(); hideProgress();
 }
 
 // ============================================================
-// RENDER RESULTS TABLE
+// PERFECT STOCK ALERT BANNER
+// ============================================================
+function renderPerfectAlert(perfect, threshold) {
+  const el = document.getElementById('perfectAlert');
+  const cards = document.getElementById('perfectCards');
+  if (!perfect.length) { el.style.display = 'none'; return; }
+
+  cards.innerHTML = perfect.slice(0, 8).map(s => `
+    <div class="perfect-card" onclick="loadIntoAIM('${s.ticker}', ${s.price})">
+      <div class="pc-ticker">${s.ticker}</div>
+      <div class="pc-name">${s.name}</div>
+      <div class="pc-score">
+        Score: <b style="color:var(--green)">${s.aimScore}/100</b> &nbsp;
+        Vol: ${s.volatility.toFixed(1)}% &nbsp;
+        $${s.price.toFixed(2)}
+      </div>
+    </div>`).join('');
+  el.style.display = 'block';
+}
+
+// ============================================================
+// RESULTS TABLE
 // ============================================================
 function renderResults() {
   const section = document.getElementById('resultsSection');
-  const body = document.getElementById('resultsBody');
+  const body    = document.getElementById('resultsBody');
+  const threshold = parseInt(document.getElementById('perfectThreshold').value);
 
   if (!allResults.length) {
-    body.innerHTML = '<tr><td colspan="11"><div class="empty">No stocks matched all criteria. Try relaxing the filters.</div></td></tr>';
-    section.style.display = 'block';
+    body.innerHTML = '<tr><td colspan="12"><div style="text-align:center;padding:40px;color:var(--muted)">No stocks matched all criteria this scan.</div></td></tr>';
     document.getElementById('resultsCount').innerHTML = '<b>0</b> stocks found';
+    section.style.display = 'block';
     return;
   }
 
   const sorted = [...allResults].sort((a, b) => {
     const va = a[sortCol] ?? -Infinity;
     const vb = b[sortCol] ?? -Infinity;
-    return sortDir * (vb - va);
+    return sortDir * (typeof va === 'string' ? va.localeCompare(vb) : vb - va);
   });
 
+  const perfectCount = sorted.filter(s => s.aimScore >= threshold).length;
   document.getElementById('resultsCount').innerHTML =
-    `<b>${sorted.length}</b> AIM-compatible stocks found — sorted by <b>${sortCol}</b>`;
+    `<b>${sorted.length}</b> candidates &nbsp;·&nbsp; <span style="color:var(--green)"><b>${perfectCount}</b> perfect</span> (≥${threshold})`;
 
   body.innerHTML = sorted.map(s => {
     const grade = scoreGrade(s.aimScore);
-    const gradeClass = { A: 'score-A', B: 'score-B', C: 'score-C', D: 'score-D' }[grade];
+    const grClass = { A:'score-A', B:'score-B', C:'score-C', D:'score-D' }[grade];
     const scoreBar = `<div class="score-wrap">
       <span>${s.aimScore}</span>
-      <div class="score-bar"><div class="score-fill ${gradeClass}" style="width:${s.aimScore}%"></div></div>
-      <span class="tag tag-${grade === 'A' ? 'green' : grade === 'D' ? 'red' : 'muted'}">${grade}</span>
+      <div class="score-bar"><div class="score-fill ${grClass}" style="width:${s.aimScore}%"></div></div>
+      <span class="tag tag-${grade==='A'?'green':grade==='D'?'red':'muted'}">${grade}</span>
     </div>`;
 
-    const rg = s.revenueGrowth !== null ? `<span class="${s.revenueGrowth >= 0 ? 'up' : 'down'}">${s.revenueGrowth >= 0 ? '+' : ''}${s.revenueGrowth}%</span>` : '<span style="color:var(--muted)">—</span>';
-    const de = s.debtEquity !== null ? s.debtEquity.toFixed(2) : '—';
-    const pe = s.pe !== null && s.pe > 0 ? s.pe.toFixed(1) : '<span style="color:var(--muted)">—</span>';
-    const chg = s.changePerc;
-    const chgStr = `<span class="${chg >= 0 ? 'up' : 'down'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</span>`;
+    const rg = s.revenueGrowth != null
+      ? `<span class="${s.revenueGrowth >= 0 ? 'up' : 'down'}">${s.revenueGrowth >= 0?'+':''}${s.revenueGrowth}%</span>`
+      : '<span style="color:var(--muted)">—</span>';
+    const de  = s.debtEquity   != null ? s.debtEquity.toFixed(2)  : '—';
+    const pe  = s.pe           != null && s.pe > 0 ? s.pe.toFixed(1) : '—';
+    const mg  = s.profitMargin != null ? `${s.profitMargin.toFixed(1)}%` : '—';
+    const chg = `<span class="${s.changePerc>=0?'up':'down'}">${s.changePerc>=0?'+':''}${s.changePerc.toFixed(2)}%</span>`;
+    const isPerfect = s.aimScore >= threshold;
+    const isNew = s.isNew;
 
-    return `<tr>
+    return `<tr class="${isPerfect?'perfect-row':''} ${isNew?'new-row':''}">
       <td>
         <a class="ticker-link" href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank">${s.ticker}</a>
+        ${isNew ? '<span class="tag tag-new" style="margin-left:4px">NEW</span>' : ''}
         <span class="company-name">${s.name}</span>
       </td>
       <td>${scoreBar}</td>
-      <td>$${(s.marketCap / 1e6).toFixed(0)}M</td>
-      <td>${(s.volume / 1000).toFixed(0)}K</td>
-      <td class="${s.volatility >= 3 ? 'up' : ''}">${s.volatility.toFixed(2)}%</td>
+      <td>$${(s.marketCap/1e6).toFixed(0)}M</td>
+      <td>${(s.volume/1000).toFixed(0)}K</td>
+      <td class="${s.volatility>=3?'up':''}">${s.volatility.toFixed(2)}%</td>
       <td>$${s.price.toFixed(2)}</td>
-      <td>${chgStr}</td>
+      <td>${chg}</td>
       <td>${rg}</td>
       <td>${de}</td>
       <td>${pe}</td>
-      <td><button class="load-btn" onclick="loadIntoAIM('${s.ticker}', ${s.price})">Load →</button></td>
+      <td>${mg}</td>
+      <td><button class="load-btn" onclick="loadIntoAIM('${s.ticker}',${s.price})">Load →</button></td>
     </tr>`;
   }).join('');
 
-  // Update sort icons
   document.querySelectorAll('th[data-col]').forEach(th => {
     th.classList.toggle('sorted', th.dataset.col === sortCol);
     const icon = th.querySelector('.sort-icon');
-    if (icon) icon.textContent = th.dataset.col === sortCol ? (sortDir === -1 ? '↓' : '↑') : '↕';
+    if (icon) icon.textContent = th.dataset.col === sortCol ? (sortDir===-1?'↓':'↑') : '↕';
   });
 
   section.style.display = 'block';
@@ -633,20 +884,35 @@ function loadIntoAIM(ticker, price) {
 // ============================================================
 function exportCSV() {
   if (!allResults.length) return;
-  const headers = ['Ticker','Name','AIM Score','Grade','Market Cap','Avg Volume','Volatility %','Price','Day %','Revenue Growth %','Debt/Equity','P/E'];
+  const headers = ['Ticker','Name','AIM Score','Grade','Market Cap','Volume','Volatility %','Price','Day %','Rev Growth %','D/E','P/E','Margin %'];
   const rows = allResults.map(s => [
     s.ticker, `"${s.name}"`, s.aimScore, scoreGrade(s.aimScore),
-    (s.marketCap / 1e6).toFixed(0), s.volume, s.volatility.toFixed(2),
+    (s.marketCap/1e6).toFixed(0), s.volume, s.volatility.toFixed(2),
     s.price.toFixed(2), s.changePerc.toFixed(2),
-    s.revenueGrowth ?? '', s.debtEquity ?? '', s.pe ?? ''
+    s.revenueGrowth??'', s.debtEquity??'', s.pe??'', s.profitMargin??''
   ]);
   const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = `aim-screener-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 }
+
+// ============================================================
+// AUTO-START: if already in trading hours on page load, prompt
+// ============================================================
+window.addEventListener('load', () => {
+  if (isInTradingHours()) {
+    addLog('Trading window is open (7am–8pm EST). Enter your API key and enable Auto-scan or click Scan Now.');
+  } else {
+    const now = estNow();
+    const h = now.getHours();
+    const msg = h < TRADING_START_H
+      ? `Trading window opens at 7:00 AM EST.`
+      : `Trading window closed at 8:00 PM EST. Resumes tomorrow at 7:00 AM.`;
+    addLog(msg, 'warn');
+  }
+});
 </script>
 </body>
 </html>
