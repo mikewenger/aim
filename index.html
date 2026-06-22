@@ -512,8 +512,8 @@ function parseCSV(raw) {
 // FORMAT HELPERS
 // ============================================================
 const fmt$ = v => v < 0
-  ? '-$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 })
-  : '$' + v.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  ? '-$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits:4, maximumFractionDigits:4 })
+  : '$' + v.toLocaleString('en-US', { minimumFractionDigits:4, maximumFractionDigits:4 });
 const fmtN = (v, d=0) => v.toLocaleString('en-US', { minimumFractionDigits:d, maximumFractionDigits:d });
 const fmtPct = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%';
 const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
@@ -1193,7 +1193,7 @@ function initFloatScroll() {
     const { ticker, price } = JSON.parse(raw);
     localStorage.removeItem('aim_load');
     if (ticker) document.getElementById('symbol').value = ticker;
-    if (price)  document.getElementById('startPrice').value = price.toFixed(2);
+    if (price)  document.getElementById('startPrice').value = price.toFixed(4);
     // Flash the fields so the user notices
     ['symbol','startPrice'].forEach(id => {
       const el = document.getElementById(id);
