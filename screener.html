@@ -558,8 +558,19 @@ function apiHeaders() {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function fetchJSON(url) {
-  const res = await fetch(url, { headers: apiHeaders() });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  const apiKey = document.getElementById('apiKey').value.trim();
+  // append key as query param fallback (some CORS configs need this)
+  const sep = url.includes('?') ? '&' : '?';
+  const fullUrl = url + sep + 'apiKey=' + encodeURIComponent(apiKey);
+  let res;
+  try {
+    res = await fetch(fullUrl, { headers: apiHeaders() });
+  } catch (e) {
+    throw new Error('Network / CORS error — Massive API blocked the browser request. ' +
+      'Check that your API plan allows browser (CORS) access, or contact Massive support. ' +
+      '(' + e.message + ')');
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} — ${url}`);
   return res.json();
 }
 
@@ -690,8 +701,9 @@ async function runScreener() {
     await batchFetch(
       capFiltered,
       async stock => {
-        const d = await fetchJSON(`${BASE}/v1/stocks/fundamentals/ratios/${stock.ticker}`);
-        return { ticker: stock.ticker, ratios: d.results || d };
+        const d = await fetchJSON(`${BASE}/stocks/financials/v1/ratios?ticker=${stock.ticker}&limit=1&sort=period_of_report.desc`);
+        const results = Array.isArray(d.results) ? d.results[0] : (d.results || d);
+        return { ticker: stock.ticker, ratios: results };
       },
       20, 120,
       (done, total) => {
@@ -705,10 +717,13 @@ async function runScreener() {
       capFiltered.forEach(s => {
         const r = ratioMap[s.ticker];
         if (r) {
-          s.revenueGrowth = r.revenue_growth_yoy != null ? parseFloat((r.revenue_growth_yoy * 100).toFixed(1)) : null;
-          s.debtEquity    = r.debt_to_equity     != null ? parseFloat(r.debt_to_equity.toFixed(2))             : null;
-          s.pe            = r.pe_ratio            != null ? parseFloat(r.pe_ratio.toFixed(1))                   : null;
-          s.profitMargin  = r.profit_margin       != null ? parseFloat((r.profit_margin * 100).toFixed(1))      : null;
+          // Massive field names from /stocks/financials/v1/ratios
+          s.revenueGrowth = r.revenue_growth      != null ? parseFloat((r.revenue_growth * 100).toFixed(1))      : null;
+          s.debtEquity    = r.debt_to_equity      != null ? parseFloat(r.debt_to_equity.toFixed(2))              : null;
+          s.pe            = (r.price_to_earnings ?? r.pe_ratio) != null
+                              ? parseFloat((r.price_to_earnings ?? r.pe_ratio).toFixed(1)) : null;
+          s.profitMargin  = (r.net_profit_margin ?? r.profit_margin) != null
+                              ? parseFloat(((r.net_profit_margin ?? r.profit_margin) * 100).toFixed(1)) : null;
         }
         // Fundamental filters
         const rgOk = s.revenueGrowth == null || s.revenueGrowth >= revMin;
