@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIM Stock Screener</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+    --border: #2e3350; --text: #e2e8f0; --muted: #8892b0;
+    --green: #10b981; --red: #ef4444; --blue: #3b82f6;
+    --yellow: #f59e0b; --purple: #8b5cf6;
+    --green-dim: #064e3b; --red-dim: #450a0a; --blue-dim: #1e3a8a;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header h1 span { color: var(--blue); }
+  header .subtitle { color: var(--muted); font-size: 12px; }
+  .badge { background: var(--blue-dim); color: var(--blue); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: auto; }
+  .back-link { color: var(--muted); font-size: 12px; text-decoration: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 5px; }
+  .back-link:hover { color: var(--text); border-color: var(--blue); }
+
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--blue); }
+  .field .hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover:not(:disabled) { background: #2563eb; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--blue); }
+  .btn-danger { background: var(--red); color: white; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+  /* PROGRESS */
+  .progress-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: none; }
+  .progress-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .progress-bar-bg { background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 8px; }
+  .progress-bar-fill { background: var(--blue); height: 100%; border-radius: 4px; transition: width 0.3s; width: 0%; }
+  .progress-stats { display: flex; gap: 20px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .progress-stats b { color: var(--text); }
+
+  /* ALERT */
+  .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+  .alert-warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: var(--yellow); }
+  .alert-info { background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.3); color: var(--blue); }
+
+  /* RESULTS */
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .results-count { font-size: 13px; color: var(--muted); }
+  .results-count b { color: var(--text); }
+
+  .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+  th { background: var(--surface2); color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 8px 10px; text-align: right; white-space: nowrap; position: sticky; top: 0; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text); }
+  th:first-child { text-align: left; }
+  th .sort-icon { display: inline-block; margin-left: 4px; opacity: 0.4; }
+  th.sorted .sort-icon { opacity: 1; color: var(--blue); }
+  td { padding: 8px 10px; text-align: right; border-top: 1px solid var(--border); white-space: nowrap; }
+  td:first-child { text-align: left; }
+  tr:hover td { background: var(--surface2); }
+
+  /* AIM SCORE BAR */
+  .score-wrap { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+  .score-bar { width: 60px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .score-A { background: var(--green); }
+  .score-B { background: #84cc16; }
+  .score-C { background: var(--yellow); }
+  .score-D { background: var(--red); }
+
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; }
+  .tag-green { background: var(--green-dim); color: var(--green); }
+  .tag-red { background: var(--red-dim); color: var(--red); }
+  .tag-muted { background: var(--surface2); color: var(--muted); }
+
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+
+  .ticker-link { font-weight: 700; color: var(--blue); text-decoration: none; font-size: 13px; }
+  .ticker-link:hover { text-decoration: underline; }
+  .company-name { font-size: 11px; color: var(--muted); display: block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .load-btn { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .load-btn:hover { background: rgba(16,185,129,0.2); }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+
+  /* CRITERIA LEGEND */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AIM <span>Screener</span></h1>
+    <div class="subtitle">Lichello-Compatible Stock Finder · Powered by Massive</div>
+  </div>
+  <a href="index.html" class="back-link">← AIM Tracker</a>
+  <span class="badge">v1.0</span>
+</header>
+
+<div class="page">
+
+  <!-- CONFIG CARD -->
+  <div class="card">
+    <div class="card-title">Screener Configuration</div>
+    <div class="grid-2" style="margin-bottom:14px">
+      <div class="field">
+        <label>Massive API Key</label>
+        <input type="password" id="apiKey" placeholder="Enter your Massive API key...">
+        <div class="hint">Your key is never stored or sent anywhere except Massive's API</div>
+      </div>
+      <div class="field">
+        <label>Exchange Filter</label>
+        <select id="exchangeFilter">
+          <option value="">All Major Exchanges (NYSE + NASDAQ)</option>
+          <option value="XNYS">NYSE only</option>
+          <option value="XNAS">NASDAQ only</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:6px"><div class="card-title" style="margin-bottom:10px">Lichello Filter Criteria</div></div>
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="field">
+        <label>Market Cap Min ($M)</label>
+        <input type="number" id="mcMin" value="100" step="10">
+      </div>
+      <div class="field">
+        <label>Market Cap Max ($M)</label>
+        <input type="number" id="mcMax" value="300" step="10">
+      </div>
+      <div class="field">
+        <label>Min Avg Daily Volume</label>
+        <input type="number" id="volMin" value="200000" step="10000">
+      </div>
+      <div class="field">
+        <label>Min Intraday Range % (Volatility)</label>
+        <input type="number" id="rangeMin" value="1.5" step="0.5">
+        <div class="hint">AIM needs stocks that swing — (H-L)/L × 100</div>
+      </div>
+      <div class="field">
+        <label>Min Revenue Growth YoY %</label>
+        <input type="number" id="revGrowthMin" value="0" step="5">
+        <div class="hint">0 = profitable growth required</div>
+      </div>
+      <div class="field">
+        <label>Max Debt / Equity Ratio</label>
+        <input type="number" id="debtMax" value="2.0" step="0.1">
+        <div class="hint">Lower debt = more durable per Lichello</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" id="runBtn" onclick="runScreener()">▶ Run Screener</button>
+      <button class="btn btn-danger" id="stopBtn" onclick="stopScreener()" style="display:none">■ Stop</button>
+      <button class="btn btn-secondary" onclick="clearResults()">Clear</button>
+      <div class="legend" style="margin-left:8px">
+        <span><span class="dot" style="background:var(--green)"></span> A — Strong AIM fit</span>
+        <span><span class="dot" style="background:#84cc16"></span> B — Good fit</span>
+        <span><span class="dot" style="background:var(--yellow)"></span> C — Marginal</span>
+        <span><span class="dot" style="background:var(--red)"></span> D — Weak</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="alert alert-error" id="errorAlert"></div>
+  <div class="alert alert-warn" id="warnAlert"></div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">Initializing...</div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-stats" id="progressStats"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsSection" style="display:none">
+    <div class="results-header">
+      <div class="results-count" id="resultsCount"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('ticker')" data-col="ticker">Ticker <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('aimScore')" data-col="aimScore">AIM Score <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('marketCap')" data-col="marketCap">Mkt Cap <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('volume')" data-col="volume">Avg Volume <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('volatility')" data-col="volatility">Volatility % <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('price')" data-col="price">Price <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('changePerc')" data-col="changePerc">Day % <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('revenueGrowth')" data-col="revenueGrowth">Rev Growth <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('debtEquity')" data-col="debtEquity">D/E <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('pe')" data-col="pe">P/E <span class="sort-icon">↕</span></th>
+            <th>Load</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// MASSIVE API CONFIG
+// ============================================================
+const BASE = 'https://api.massive.com';
+
+let aborted = false;
+let allResults = [];
+let sortCol = 'aimScore';
+let sortDir = -1; // -1 = desc
+
+function apiHeaders() {
+  const key = document.getElementById('apiKey').value.trim();
+  return { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' };
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ============================================================
+// PROGRESS HELPERS
+// ============================================================
+function showProgress(label, pct, stats = '') {
+  const wrap = document.getElementById('progressWrap');
+  wrap.style.display = 'block';
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressStats').innerHTML = stats;
+}
+
+function hideProgress() {
+  document.getElementById('progressWrap').style.display = 'none';
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorAlert');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('errorAlert').style.display = 'none';
+  document.getElementById('warnAlert').style.display = 'none';
+}
+
+// ============================================================
+// AIM SCORE ALGORITHM
+// Based on Lichello's criteria: volatility, durability, growth
+// ============================================================
+function calcAIMScore(stock) {
+  let score = 0;
+
+  // Volatility (40 pts) — AIM's engine, must swing to profit
+  // Use intraday range % as proxy
+  const vol = stock.volatility || 0;
+  if (vol >= 5)       score += 40;
+  else if (vol >= 3)  score += 32;
+  else if (vol >= 2)  score += 22;
+  else if (vol >= 1)  score += 12;
+  else                score += 0;
+
+  // Revenue Growth (25 pts) — Lichello: growing companies recover faster
+  const rg = stock.revenueGrowth;
+  if (rg !== null && rg !== undefined) {
+    if (rg >= 20)      score += 25;
+    else if (rg >= 10) score += 20;
+    else if (rg >= 0)  score += 12;
+    else               score += 0;
+  } else {
+    score += 8; // unknown — partial credit
+  }
+
+  // Debt / Equity (20 pts) — Lichello: low debt = durable = recovers from dips
+  const de = stock.debtEquity;
+  if (de !== null && de !== undefined) {
+    if (de <= 0.3)     score += 20;
+    else if (de <= 0.8) score += 15;
+    else if (de <= 1.5) score += 8;
+    else if (de <= 2.0) score += 3;
+    else               score += 0;
+  } else {
+    score += 8;
+  }
+
+  // Profitability (10 pts) — positive PE = real earnings
+  const pe = stock.pe;
+  if (pe !== null && pe !== undefined && pe > 0 && pe < 80) score += 10;
+  else if (pe !== null && pe !== undefined && pe > 0)       score += 5;
+
+  // Volume above floor (5 pts) — must be liquid enough for AIM to execute
+  if (stock.volume >= 500000) score += 5;
+  else if (stock.volume >= 200000) score += 3;
+
+  return Math.min(score, 100);
+}
+
+function scoreGrade(s) {
+  if (s >= 75) return 'A';
+  if (s >= 55) return 'B';
+  if (s >= 35) return 'C';
+  return 'D';
+}
+
+// ============================================================
+// FETCH HELPERS
+// ============================================================
+async function fetchJSON(url) {
+  const res = await fetch(url, { headers: apiHeaders() });
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText} (${url})`);
+  return res.json();
+}
+
+// Batch fetch with concurrency limit and abort support
+async function batchFetch(items, fetchFn, batchSize = 20, delayMs = 150, onBatch) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    if (aborted) break;
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(item => fetchFn(item).catch(() => null)));
+    results.push(...batchResults);
+    if (onBatch) onBatch(i + batch.length, items.length);
+    if (i + batchSize < items.length) await sleep(delayMs);
+  }
+  return results;
+}
+
+// ============================================================
+// MAIN SCREENER
+// ============================================================
+async function runScreener() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { showError('Please enter your Massive API key.'); return; }
+
+  hideError();
+  aborted = false;
+  allResults = [];
+
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('stopBtn').style.display = 'inline-flex';
+  document.getElementById('resultsSection').style.display = 'none';
+
+  const mcMin = parseFloat(document.getElementById('mcMin').value) * 1e6;
+  const mcMax = parseFloat(document.getElementById('mcMax').value) * 1e6;
+  const volMin = parseInt(document.getElementById('volMin').value);
+  const rangeMin = parseFloat(document.getElementById('rangeMin').value);
+  const revMin = parseFloat(document.getElementById('revGrowthMin').value);
+  const debtMax = parseFloat(document.getElementById('debtMax').value);
+
+  try {
+    // ── STEP 1: Full market snapshot ────────────────────────
+    showProgress('Step 1 of 3 — Fetching full market snapshot...', 5,
+      '<span>Pulling all US tickers from Massive...</span>');
+
+    const snapUrl = `${BASE}/v2/snapshot/locale/us/markets/stocks/tickers?include_otc=false`;
+    const snapData = await fetchJSON(snapUrl);
+
+    if (!snapData.tickers || !snapData.tickers.length) {
+      throw new Error('No snapshot data returned. Market may be closed or API key invalid.');
+    }
+
+    // Filter by today's volume
+    const volFiltered = snapData.tickers.filter(t => {
+      const v = t.day?.v || t.min?.av || 0;
+      return v >= volMin;
+    });
+
+    showProgress('Step 1 of 3 — Snapshot received', 12,
+      `<span>Total tickers: <b>${snapData.tickers.length.toLocaleString()}</b></span>
+       <span>Volume ≥ ${volMin.toLocaleString()}: <b>${volFiltered.length.toLocaleString()}</b></span>`);
+
+    if (aborted) return done();
+
+    await sleep(300);
+
+    // ── STEP 2: Ticker details for market cap ───────────────
+    showProgress('Step 2 of 3 — Fetching ticker details for market cap filter...', 15,
+      `<span>Processing <b>${volFiltered.length.toLocaleString()}</b> tickers in batches of 20...</span>`);
+
+    const snapMap = {};
+    snapData.tickers.forEach(t => { snapMap[t.ticker] = t; });
+
+    const marketCapFiltered = [];
+    const nameMap = {};
+
+    await batchFetch(
+      volFiltered,
+      async (t) => {
+        const data = await fetchJSON(`${BASE}/v3/reference/tickers/${t.ticker}`);
+        return { ticker: t.ticker, detail: data.results };
+      },
+      20, 120,
+      (done, total) => {
+        const pct = 15 + (done / total) * 45;
+        showProgress('Step 2 of 3 — Filtering by market cap ($' +
+          (mcMin/1e6).toFixed(0) + 'M – $' + (mcMax/1e6).toFixed(0) + 'M)...', pct,
+          `<span>Checked: <b>${done.toLocaleString()} / ${total.toLocaleString()}</b></span>
+           <span>Passed cap filter: <b>${marketCapFiltered.length}</b></span>`);
+      }
+    ).then(details => {
+      details.forEach((d, i) => {
+        if (!d || !d.detail) return;
+        const mc = d.detail.market_cap;
+        if (mc >= mcMin && mc <= mcMax) {
+          const snap = snapMap[d.ticker];
+          const dayH = snap?.day?.h || snap?.prevDay?.h || 0;
+          const dayL = snap?.day?.l || snap?.prevDay?.l || 0;
+          const dayC = snap?.day?.c || snap?.lastTrade?.p || 0;
+          const dayV = snap?.day?.v || snap?.min?.av || 0;
+          const volatility = dayL > 0 ? ((dayH - dayL) / dayL) * 100 : 0;
+
+          if (volatility >= rangeMin) {
+            marketCapFiltered.push({
+              ticker: d.ticker,
+              name: d.detail.name || d.ticker,
+              marketCap: mc,
+              price: dayC,
+              volume: dayV,
+              volatility: parseFloat(volatility.toFixed(2)),
+              changePerc: snap?.todaysChangePerc || 0,
+              revenueGrowth: null,
+              debtEquity: null,
+              pe: null,
+              aimScore: 0,
+            });
+            nameMap[d.ticker] = d.detail.name || d.ticker;
+          }
+        }
+      });
+    });
+
+    if (aborted) return done();
+
+    if (!marketCapFiltered.length) {
+      showProgress('Complete', 100, '');
+      hideProgress();
+      showError('No stocks passed the market cap and volatility filters. Try relaxing the criteria.');
+      return done();
+    }
+
+    showProgress('Step 3 of 3 — Fetching fundamentals...', 62,
+      `<span>Cap + volatility filter passed: <b>${marketCapFiltered.length}</b></span>
+       <span>Fetching ratios for each...</span>`);
+
+    // ── STEP 3: Fundamentals / ratios ───────────────────────
+    await batchFetch(
+      marketCapFiltered,
+      async (stock) => {
+        const data = await fetchJSON(`${BASE}/v1/stocks/fundamentals/ratios/${stock.ticker}`);
+        return { ticker: stock.ticker, ratios: data.results || data };
+      },
+      20, 120,
+      (done, total) => {
+        const pct = 62 + (done / total) * 30;
+        showProgress('Step 3 of 3 — Loading fundamentals...', pct,
+          `<span>Fundamentals fetched: <b>${done} / ${total}</b></span>`);
+      }
+    ).then(ratioResults => {
+      const ratioMap = {};
+      ratioResults.forEach(r => {
+        if (r && r.ratios) ratioMap[r.ticker] = r.ratios;
+      });
+
+      marketCapFiltered.forEach(stock => {
+        const r = ratioMap[stock.ticker];
+        if (r) {
+          stock.revenueGrowth = r.revenue_growth_yoy != null ? parseFloat((r.revenue_growth_yoy * 100).toFixed(1)) : null;
+          stock.debtEquity    = r.debt_to_equity   != null ? parseFloat(r.debt_to_equity.toFixed(2))           : null;
+          stock.pe            = r.pe_ratio          != null ? parseFloat(r.pe_ratio.toFixed(1))                 : null;
+          stock.profitMargin  = r.profit_margin     != null ? parseFloat((r.profit_margin * 100).toFixed(1))    : null;
+        }
+
+        // Apply fundamental filters
+        const rgOk = stock.revenueGrowth === null || stock.revenueGrowth >= revMin;
+        const deOk = stock.debtEquity === null || stock.debtEquity <= debtMax;
+        stock._pass = rgOk && deOk;
+        stock.aimScore = calcAIMScore(stock);
+      });
+    });
+
+    // Final filter and sort
+    allResults = marketCapFiltered
+      .filter(s => s._pass !== false)
+      .sort((a, b) => b.aimScore - a.aimScore);
+
+    showProgress('Complete', 100,
+      `<span>Final candidates: <b>${allResults.length}</b></span>`);
+
+    await sleep(400);
+    hideProgress();
+    renderResults();
+
+  } catch (err) {
+    hideProgress();
+    showError('Screener error: ' + err.message);
+    console.error(err);
+  }
+
+  done();
+}
+
+function done() {
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('stopBtn').style.display = 'none';
+}
+
+function stopScreener() {
+  aborted = true;
+  hideProgress();
+  done();
+}
+
+function clearResults() {
+  allResults = [];
+  document.getElementById('resultsSection').style.display = 'none';
+  hideError();
+  hideProgress();
+}
+
+// ============================================================
+// RENDER RESULTS TABLE
+// ============================================================
+function renderResults() {
+  const section = document.getElementById('resultsSection');
+  const body = document.getElementById('resultsBody');
+
+  if (!allResults.length) {
+    body.innerHTML = '<tr><td colspan="11"><div class="empty">No stocks matched all criteria. Try relaxing the filters.</div></td></tr>';
+    section.style.display = 'block';
+    document.getElementById('resultsCount').innerHTML = '<b>0</b> stocks found';
+    return;
+  }
+
+  const sorted = [...allResults].sort((a, b) => {
+    const va = a[sortCol] ?? -Infinity;
+    const vb = b[sortCol] ?? -Infinity;
+    return sortDir * (vb - va);
+  });
+
+  document.getElementById('resultsCount').innerHTML =
+    `<b>${sorted.length}</b> AIM-compatible stocks found — sorted by <b>${sortCol}</b>`;
+
+  body.innerHTML = sorted.map(s => {
+    const grade = scoreGrade(s.aimScore);
+    const gradeClass = { A: 'score-A', B: 'score-B', C: 'score-C', D: 'score-D' }[grade];
+    const scoreBar = `<div class="score-wrap">
+      <span>${s.aimScore}</span>
+      <div class="score-bar"><div class="score-fill ${gradeClass}" style="width:${s.aimScore}%"></div></div>
+      <span class="tag tag-${grade === 'A' ? 'green' : grade === 'D' ? 'red' : 'muted'}">${grade}</span>
+    </div>`;
+
+    const rg = s.revenueGrowth !== null ? `<span class="${s.revenueGrowth >= 0 ? 'up' : 'down'}">${s.revenueGrowth >= 0 ? '+' : ''}${s.revenueGrowth}%</span>` : '<span style="color:var(--muted)">—</span>';
+    const de = s.debtEquity !== null ? s.debtEquity.toFixed(2) : '—';
+    const pe = s.pe !== null && s.pe > 0 ? s.pe.toFixed(1) : '<span style="color:var(--muted)">—</span>';
+    const chg = s.changePerc;
+    const chgStr = `<span class="${chg >= 0 ? 'up' : 'down'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</span>`;
+
+    return `<tr>
+      <td>
+        <a class="ticker-link" href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank">${s.ticker}</a>
+        <span class="company-name">${s.name}</span>
+      </td>
+      <td>${scoreBar}</td>
+      <td>$${(s.marketCap / 1e6).toFixed(0)}M</td>
+      <td>${(s.volume / 1000).toFixed(0)}K</td>
+      <td class="${s.volatility >= 3 ? 'up' : ''}">${s.volatility.toFixed(2)}%</td>
+      <td>$${s.price.toFixed(2)}</td>
+      <td>${chgStr}</td>
+      <td>${rg}</td>
+      <td>${de}</td>
+      <td>${pe}</td>
+      <td><button class="load-btn" onclick="loadIntoAIM('${s.ticker}', ${s.price})">Load →</button></td>
+    </tr>`;
+  }).join('');
+
+  // Update sort icons
+  document.querySelectorAll('th[data-col]').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === sortCol);
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = th.dataset.col === sortCol ? (sortDir === -1 ? '↓' : '↑') : '↕';
+  });
+
+  section.style.display = 'block';
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = -1; }
+  renderResults();
+}
+
+// ============================================================
+// LOAD INTO AIM TRACKER
+// ============================================================
+function loadIntoAIM(ticker, price) {
+  localStorage.setItem('aim_load', JSON.stringify({ ticker, price }));
+  window.open('index.html', '_blank');
+}
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+function exportCSV() {
+  if (!allResults.length) return;
+  const headers = ['Ticker','Name','AIM Score','Grade','Market Cap','Avg Volume','Volatility %','Price','Day %','Revenue Growth %','Debt/Equity','P/E'];
+  const rows = allResults.map(s => [
+    s.ticker, `"${s.name}"`, s.aimScore, scoreGrade(s.aimScore),
+    (s.marketCap / 1e6).toFixed(0), s.volume, s.volatility.toFixed(2),
+    s.price.toFixed(2), s.changePerc.toFixed(2),
+    s.revenueGrowth ?? '', s.debtEquity ?? '', s.pe ?? ''
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `aim-screener-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>

@@ -1181,6 +1181,27 @@ function initFloatScroll() {
     _floatScrollReady = true;
   }
 }
+
+// ============================================================
+// SCREENER HANDOFF — pre-fill ticker + price from screener.html
+// ============================================================
+(function() {
+  const raw = localStorage.getItem('aim_load');
+  if (!raw) return;
+  try {
+    const { ticker, price } = JSON.parse(raw);
+    localStorage.removeItem('aim_load');
+    if (ticker) document.getElementById('symbol').value = ticker;
+    if (price)  document.getElementById('startPrice').value = price.toFixed(2);
+    // Flash the fields so the user notices
+    ['symbol','startPrice'].forEach(id => {
+      const el = document.getElementById(id);
+      el.style.transition = 'border-color 0s';
+      el.style.borderColor = '#10b981';
+      setTimeout(() => { el.style.transition = 'border-color 0.8s'; el.style.borderColor = ''; }, 1200);
+    });
+  } catch(e) {}
+})();
 </script>
 </body>
 </html>
