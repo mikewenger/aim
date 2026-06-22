@@ -262,6 +262,22 @@
         <input type="number" id="marginMin" value="0" step="1">
       </div>
       <div class="field">
+        <label>Exclude Reverse Splits</label>
+        <select id="excludeRevSplit">
+          <option value="1">Yes — exclude (2yr lookback)</option>
+          <option value="0">No — allow</option>
+        </select>
+        <div class="hint">Reverse split = company in distress, AIM math breaks</div>
+      </div>
+      <div class="field">
+        <label>Exclude Share Dilution</label>
+        <select id="excludeDilution">
+          <option value="1">Yes — exclude &gt;15% share growth YoY</option>
+          <option value="0">No — allow</option>
+        </select>
+        <div class="hint">Dilution voted yes destroys per-share AIM math</div>
+      </div>
+      <div class="field">
         <label>Sound Alert</label>
         <select id="soundAlert">
           <option value="1">On — beep when perfect stock found</option>
@@ -599,15 +615,17 @@ async function runScreener() {
   document.getElementById('runBtn').disabled = true;
   document.getElementById('stopBtn').style.display = 'inline-flex';
 
-  const mcMin       = parseFloat(document.getElementById('mcMin').value) * 1e6;
-  const mcMax       = parseFloat(document.getElementById('mcMax').value) * 1e6;
-  const volMin      = parseInt(document.getElementById('volMin').value);
-  const rangeMin    = parseFloat(document.getElementById('rangeMin').value);
-  const revMin      = parseFloat(document.getElementById('revGrowthMin').value);
-  const debtMax     = parseFloat(document.getElementById('debtMax').value);
-  const marginMin   = parseFloat(document.getElementById('marginMin').value);
-  const threshold   = parseInt(document.getElementById('perfectThreshold').value);
-  const avoid52High = document.getElementById('avoid52High').value === '1';
+  const mcMin          = parseFloat(document.getElementById('mcMin').value) * 1e6;
+  const mcMax          = parseFloat(document.getElementById('mcMax').value) * 1e6;
+  const volMin         = parseInt(document.getElementById('volMin').value);
+  const rangeMin       = parseFloat(document.getElementById('rangeMin').value);
+  const revMin         = parseFloat(document.getElementById('revGrowthMin').value);
+  const debtMax        = parseFloat(document.getElementById('debtMax').value);
+  const marginMin      = parseFloat(document.getElementById('marginMin').value);
+  const threshold      = parseInt(document.getElementById('perfectThreshold').value);
+  const avoid52High    = document.getElementById('avoid52High').value === '1';
+  const excludeRevSplit  = document.getElementById('excludeRevSplit').value === '1';
+  const excludeDilution  = document.getElementById('excludeDilution').value === '1';
 
   const scanStart = Date.now();
   scanCount++;
@@ -615,8 +633,8 @@ async function runScreener() {
   addLog(`Scan #${scanCount} started — market cap $${mcMin/1e6}M–$${mcMax/1e6}M, vol ≥ ${volMin.toLocaleString()}`);
 
   try {
-    // ── STEP 1: Full market snapshot ────────────────────────
-    showProgress('Step 1 / 3 — Fetching market snapshot...', 5, 'Pulling all US tickers from Massive...');
+    // ── STEP 1: Real-time market snapshot ───────────────────
+    showProgress('Step 1 / 4 — Real-time market snapshot...', 5, 'Pulling live US tickers from Massive real-time feed...');
 
     const snapData = await fetchJSON(`${BASE}/v2/snapshot/locale/us/markets/stocks/tickers?include_otc=false`);
     if (!snapData.tickers?.length) throw new Error('No snapshot data. Market may be closed or API key invalid.');
@@ -626,14 +644,14 @@ async function runScreener() {
 
     const volFiltered = snapData.tickers.filter(t => (t.day?.v || t.min?.av || 0) >= volMin);
 
-    showProgress('Step 1 / 3 — Snapshot received', 12,
+    showProgress('Step 1 / 4 — Snapshot received', 10,
       `<span>Total tickers: <b>${snapData.tickers.length.toLocaleString()}</b></span>
        <span>Volume ≥ ${volMin.toLocaleString()}: <b>${volFiltered.length.toLocaleString()}</b></span>`);
 
     if (aborted) return finish();
     await sleep(200);
 
-    // ── STEP 2: Ticker details → market cap filter ──────────
+    // ── STEP 2: Reference details → market cap filter ───────
     const capFiltered = [];
 
     await batchFetch(
@@ -644,8 +662,8 @@ async function runScreener() {
       },
       20, 120,
       (done, total) => {
-        const pct = 15 + (done / total) * 45;
-        showProgress('Step 2 / 3 — Filtering by market cap...', pct,
+        const pct = 12 + (done / total) * 33;
+        showProgress('Step 2 / 4 — Filtering by market cap...', pct,
           `<span>Checked: <b>${done.toLocaleString()} / ${total.toLocaleString()}</b></span>
            <span>Passed: <b>${capFiltered.length}</b></span>`);
       }
@@ -663,9 +681,7 @@ async function runScreener() {
         const vol52h = d.detail.week_52_high || null;
         const volatility = dayL > 0 ? ((dayH - dayL) / dayL) * 100 : 0;
 
-        // Avoid 52-week highs (Lichello: buy strong company at low price)
         if (avoid52High && vol52h && dayC >= vol52h * 0.97) return;
-
         if (volatility < rangeMin) return;
 
         capFiltered.push({
@@ -681,6 +697,8 @@ async function runScreener() {
           debtEquity:    null,
           pe:            null,
           profitMargin:  null,
+          sharesGrowth:  null,
+          hadRevSplit:   false,
           aimScore:      0,
           isNew:         !prevTickers.has(d.ticker),
         });
@@ -694,45 +712,100 @@ async function runScreener() {
       return finish();
     }
 
-    // ── STEP 3: Fundamentals ────────────────────────────────
-    showProgress('Step 3 / 3 — Fetching fundamentals...', 62,
+    // ── STEP 3: Real-time price + fundamentals ──────────────
+    showProgress('Step 3 / 4 — Real-time prices + fundamentals...', 47,
       `<span>Cap + volatility passed: <b>${capFiltered.length}</b></span>`);
 
     await batchFetch(
       capFiltered,
       async stock => {
-        const d = await fetchJSON(`${BASE}/stocks/financials/v1/ratios?ticker=${stock.ticker}&limit=1&sort=period_of_report.desc`);
-        const results = Array.isArray(d.results) ? d.results[0] : (d.results || d);
-        return { ticker: stock.ticker, ratios: results };
+        // Real-time last trade price (supersedes snapshot close)
+        const [rtData, ratioData] = await Promise.all([
+          fetchJSON(`${BASE}/v2/last/trade/${stock.ticker}`).catch(() => null),
+          fetchJSON(`${BASE}/stocks/financials/v1/ratios?ticker=${stock.ticker}&limit=1&sort=period_of_report.desc`).catch(() => null),
+        ]);
+        const rtPrice = rtData?.results?.p || null;
+        const ratios  = ratioData ? (Array.isArray(ratioData.results) ? ratioData.results[0] : ratioData.results) : null;
+        return { ticker: stock.ticker, rtPrice, ratios };
       },
-      20, 120,
+      10, 150,
       (done, total) => {
-        showProgress('Step 3 / 3 — Loading fundamentals...', 62 + (done / total) * 30,
-          `<span>Fundamentals: <b>${done} / ${total}</b></span>`);
+        showProgress('Step 3 / 4 — Real-time prices + fundamentals...', 47 + (done / total) * 28,
+          `<span>Loaded: <b>${done} / ${total}</b></span>`);
       }
-    ).then(ratioResults => {
-      const ratioMap = {};
-      ratioResults.forEach(r => { if (r?.ratios) ratioMap[r.ticker] = r.ratios; });
-
-      capFiltered.forEach(s => {
-        const r = ratioMap[s.ticker];
-        if (r) {
-          // Massive field names from /stocks/financials/v1/ratios
-          s.revenueGrowth = r.revenue_growth      != null ? parseFloat((r.revenue_growth * 100).toFixed(1))      : null;
-          s.debtEquity    = r.debt_to_equity      != null ? parseFloat(r.debt_to_equity.toFixed(2))              : null;
-          s.pe            = (r.price_to_earnings ?? r.pe_ratio) != null
-                              ? parseFloat((r.price_to_earnings ?? r.pe_ratio).toFixed(1)) : null;
-          s.profitMargin  = (r.net_profit_margin ?? r.profit_margin) != null
-                              ? parseFloat(((r.net_profit_margin ?? r.profit_margin) * 100).toFixed(1)) : null;
+    ).then(results => {
+      results.forEach(r => {
+        if (!r) return;
+        const s = capFiltered.find(x => x.ticker === r.ticker);
+        if (!s) return;
+        if (r.rtPrice) s.price = r.rtPrice;  // upgrade to real-time price
+        const rt = r.ratios;
+        if (rt) {
+          s.revenueGrowth = rt.revenue_growth      != null ? parseFloat((rt.revenue_growth * 100).toFixed(1))                : null;
+          s.debtEquity    = rt.debt_to_equity      != null ? parseFloat(rt.debt_to_equity.toFixed(2))                        : null;
+          s.pe            = (rt.price_to_earnings ?? rt.pe_ratio) != null
+                              ? parseFloat((rt.price_to_earnings ?? rt.pe_ratio).toFixed(1))                                  : null;
+          s.profitMargin  = (rt.net_profit_margin ?? rt.profit_margin) != null
+                              ? parseFloat(((rt.net_profit_margin ?? rt.profit_margin) * 100).toFixed(1))                     : null;
+          // shares outstanding growth — detect dilution
+          const sharesNow  = rt.weighted_average_shares ?? rt.shares_outstanding ?? null;
+          const sharesPrev = rt.weighted_average_shares_prev ?? rt.shares_outstanding_prev ?? null;
+          if (sharesNow && sharesPrev && sharesPrev > 0) {
+            s.sharesGrowth = parseFloat(((sharesNow - sharesPrev) / sharesPrev * 100).toFixed(1));
+          }
         }
-        // Fundamental filters
         const rgOk = s.revenueGrowth == null || s.revenueGrowth >= revMin;
         const deOk = s.debtEquity    == null || s.debtEquity    <= debtMax;
         const mgOk = s.profitMargin  == null || s.profitMargin  >= marginMin;
-        s._pass = rgOk && deOk && mgOk;
+        const dilOk = !excludeDilution || s.sharesGrowth == null || s.sharesGrowth <= 15;
+        s._pass = rgOk && deOk && mgOk && dilOk;
         s.aimScore = calcAIMScore(s);
       });
     });
+
+    if (aborted) return finish();
+
+    // ── STEP 4: Corporate actions — reverse split check ─────
+    const fundPassed = capFiltered.filter(s => s._pass !== false);
+
+    if (excludeRevSplit && fundPassed.length) {
+      showProgress('Step 4 / 4 — Checking for reverse splits...', 77,
+        `<span>Screening <b>${fundPassed.length}</b> candidates for reverse splits (2yr lookback)</span>`);
+
+      const twoYrsAgo = new Date();
+      twoYrsAgo.setFullYear(twoYrsAgo.getFullYear() - 2);
+      const since = twoYrsAgo.toISOString().slice(0, 10);
+
+      await batchFetch(
+        fundPassed,
+        async stock => {
+          const d = await fetchJSON(
+            `${BASE}/v3/reference/splits?ticker=${stock.ticker}&execution_date.gte=${since}&order=desc&limit=5`
+          ).catch(() => null);
+          return { ticker: stock.ticker, splits: d?.results || [] };
+        },
+        20, 100,
+        (done, total) => {
+          showProgress('Step 4 / 4 — Reverse split check...', 77 + (done / total) * 18,
+            `<span>Checked: <b>${done} / ${total}</b></span>`);
+        }
+      ).then(splitResults => {
+        splitResults.forEach(r => {
+          if (!r) return;
+          const s = capFiltered.find(x => x.ticker === r.ticker);
+          if (!s) return;
+          // reverse split: split_from > split_to (e.g. 10-for-1 → split_from=10, split_to=1)
+          const hadReverse = r.splits.some(sp => (sp.split_from || 1) > (sp.split_to || 1));
+          if (hadReverse) {
+            s.hadRevSplit = true;
+            s._pass = false;
+          }
+        });
+      });
+    } else {
+      showProgress('Step 4 / 4 — Skipping reverse split check', 95, '');
+      await sleep(100);
+    }
 
     // Final filtered + scored list
     const passed = capFiltered.filter(s => s._pass !== false);
@@ -751,8 +824,12 @@ async function runScreener() {
 
     document.getElementById('lastScanTime').textContent = `Last scan: ${estNow().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true})} EST`;
 
-    addLog(`Scan #${scanCount} complete — ${passed.length} candidates in ${elapsed}s. ` +
-           (perfect.length ? `${perfect.length} perfect stock(s) found!` : 'No perfect stocks this scan.'),
+    const revSplitDropped = excludeRevSplit ? capFiltered.filter(s => s.hadRevSplit).length : 0;
+    const dilutionDropped = excludeDilution ? capFiltered.filter(s => s._pass === false && !s.hadRevSplit && s.sharesGrowth > 15).length : 0;
+    addLog(`Scan #${scanCount} complete — ${passed.length} candidates in ${elapsed}s` +
+           (revSplitDropped ? ` | ${revSplitDropped} dropped (reverse split)` : '') +
+           (dilutionDropped ? ` | ${dilutionDropped} dropped (dilution)` : '') +
+           '. ' + (perfect.length ? `${perfect.length} perfect stock(s) found!` : 'No perfect stocks this scan.'),
            perfect.length ? 'perfect' : 'info');
 
     if (perfect.length) {
