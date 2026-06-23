@@ -420,19 +420,19 @@
 function calcAIM(prices, dates, config) {
   const { initInvest, startPrice, cashPct, a, b, mdt, cashInt } = config;
   const monthlyInt = Math.pow(1 + cashInt / 100, 1 / 12) - 1;
-  const initStock = initInvest * (1 - cashPct / 100);
-  const initCash  = initInvest * (cashPct / 100);
-  const initPrice = startPrice;  // use the user-supplied starting price
-  const initUnits = initStock / initPrice;
-  const initPC    = initStock;
+  const initStock  = initInvest * (1 - cashPct / 100);
+  const initPrice  = startPrice;
+  const initUnits  = Math.floor(initStock / initPrice);           // whole shares only
+  const initCash   = initInvest - initUnits * initPrice;          // leftover after buying whole shares
+  const initPC     = initUnits * initPrice;                       // PC = actual stock value purchased
 
   const rows = [];
 
-  // Row 0 — initial setup (using user-defined start price, before any CSV prices)
+  // Row 0 — initial setup
   rows.push({
     i: 0, date: 'Start', price: initPrice,
     units: initUnits, PC: initPC, cash: initCash,
-    SV: initStock, X: 0, trade: 0, action: 'INIT',
+    SV: initUnits * initPrice, X: 0, trade: 0, action: 'INIT',
     aimPortfolio: initInvest,
     bhPortfolio: initInvest,
     mth: 0,
@@ -440,26 +440,30 @@ function calcAIM(prices, dates, config) {
 
   // All CSV prices are subsequent price updates (rows[0] is the INIT row)
   for (let i = 0; i < prices.length; i++) {
-    const prev = rows[i];          // rows[0] = INIT, rows[i] = prev for CSV row i
+    const prev = rows[i];
     const price = prices[i];
     const mth = i + 1;
 
-    const SV = price * prev.units;       // stock value using prev units
-    const X  = prev.PC - SV;            // advice: + = buy, - = sell
-    const absX = Math.abs(X);
+    const SV    = price * prev.units;
+    const X     = prev.PC - SV;
+    const absX  = Math.abs(X);
     const resist = a / 100 * SV;
 
     let trade = 0;
     let action = 'HOLD';
     if (X > 0 && (absX - resist) > mdt) {
-      trade  = absX - resist;   // buy
-      action = 'BUY';
+      // Buy whole shares only; actual cash spent may differ from AIM advice
+      const sharesToBuy = Math.floor((absX - resist) / price);
+      trade  = sharesToBuy * price;
+      action = sharesToBuy > 0 ? 'BUY' : 'HOLD';
     } else if (X < 0 && (absX - resist) > mdt) {
-      trade  = -(absX - resist); // sell (negative)
-      action = 'SELL';
+      // Sell whole shares only
+      const sharesToSell = Math.floor((absX - resist) / price);
+      trade  = -(sharesToSell * price);
+      action = sharesToSell > 0 ? 'SELL' : 'HOLD';
     }
 
-    const units = prev.units + trade / price;
+    const units = prev.units + Math.round(trade / price);         // whole shares
     const PC    = prev.PC + (b / 100) * Math.max(trade, 0);
     const cash  = prev.cash * (1 + monthlyInt) - trade;
 
@@ -701,7 +705,7 @@ function renderTransactionTable() {
       <td>${fmt$(r.price)}</td>
       <td class="${r.action==='BUY'?'up':'down'}">${fmt$(Math.abs(r.trade))}</td>
       <td class="${r.action==='BUY'?'up':'down'}">${r.action==='BUY'?'+':'-'}${fmtN(Math.abs(unitDelta),1)}</td>
-      <td>${fmtN(r.units,4)}</td>
+      <td>${fmtN(r.units,0)}</td>
       <td>${fmt$(r.PC)}</td>
       <td class="${colorClass(r.cash)}">${fmt$(r.cash)}</td>
       <td>${fmt$(r.SV)}</td>
@@ -741,7 +745,7 @@ function renderFullTable() {
       <td class="${colorClass(r.X)}">${fmt$(r.X)}</td>
       <td class="${r.trade>0?'up':r.trade<0?'down':''}">${r.trade!==0?fmt$(r.trade):''}</td>
       <td>${actionTag}</td>
-      <td>${fmtN(r.units,4)}</td>
+      <td>${fmtN(r.units,0)}</td>
       <td>${fmt$(r.PC)}</td>
       <td class="${colorClass(r.cash)}">${fmt$(r.cash)}</td>
       <td>${fmt$(r.aimPortfolio)}</td>
@@ -1099,7 +1103,7 @@ function renderStatusBar(config) {
     <span>Sells: <b class="down">${sells}</b></span>
     <span>PC: <b>${fmt$(last.PC)}</b></span>
     <span>Cash: <b class="${last.cash < 0 ? 'down' : ''}">${fmt$(last.cash)}</b></span>
-    <span>Units: <b>${fmtN(last.units, 4)}</b></span>
+    <span>Units: <b>${fmtN(last.units, 0)}</b></span>
   `;
 }
 
@@ -1132,7 +1136,7 @@ function renderStats(last, config) {
     <div class="stat-card">
       <div class="stat-label">Cash Reserve</div>
       <div class="stat-value ${colorClass(last.cash)}">${fmt$(last.cash)}</div>
-      <div class="stat-sub">${fmtN(last.units, 4)} units held</div>
+      <div class="stat-sub">${fmtN(last.units, 0)} units held</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Stock Value</div>
