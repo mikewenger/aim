@@ -146,6 +146,15 @@
   .condition-btn.active { border-color: var(--blue); background: var(--blue-dim); color: var(--blue); }
   .condition-btn .label { font-weight: 700; font-size: 12px; display: block; }
   .condition-btn .ratio { color: var(--muted); font-size: 10px; }
+
+  /* SAVED PORTFOLIOS */
+  .portfolio-item { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .portfolio-btn { flex: 1; text-align: left; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 5px; padding: 5px 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .portfolio-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .portfolio-btn.active-port { border-color: var(--green); color: var(--green); background: rgba(16,185,129,0.08); }
+  .portfolio-meta { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .portfolio-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px; border-radius: 3px; }
+  .portfolio-del:hover { color: var(--red); background: var(--red-dim); }
 </style>
 </head>
 <body>
@@ -243,6 +252,14 @@
       <div class="section-title">Initialize Portfolio</div>
       <button class="btn btn-primary" onclick="initPortfolio()" style="margin-bottom:6px">⚡ Initialize Portfolio</button>
       <div class="hint" style="margin-top:4px">Sets up starting position. Do this once before live trading.</div>
+    </div>
+
+    <hr>
+
+    <div>
+      <div class="section-title">Saved Portfolios</div>
+      <div id="portfolioList" style="margin-bottom:8px"></div>
+      <button class="btn btn-secondary" style="width:100%" onclick="savePortfolio()">💾 Save Current Portfolio</button>
     </div>
 
     <hr>
@@ -1184,6 +1201,110 @@ function initFloatScroll() {
 }
 
 // ============================================================
+// PORTFOLIO SAVE / LOAD / DELETE
+// ============================================================
+const STORE_KEY = 'aim_portfolios';
+
+function getPortfolios() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function savePortfolio() {
+  const symbol = document.getElementById('symbol').value.toUpperCase().trim();
+  if (!symbol) { alert('Enter a stock symbol first.'); return; }
+  if (!liveConfig) { alert('Initialize the portfolio before saving.'); return; }
+
+  const portfolios = getPortfolios();
+  portfolios[symbol] = {
+    symbol,
+    config:     liveConfig,
+    livePrices: [...livePrices],
+    liveDates:  [...liveDates],
+    csvData:    document.getElementById('csvData').value,
+    savedAt:    new Date().toISOString(),
+  };
+  localStorage.setItem(STORE_KEY, JSON.stringify(portfolios));
+  renderPortfolioList(symbol);
+
+  // brief green flash on the save button
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '✓ Saved';
+  btn.style.color = 'var(--green)';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+}
+
+function loadPortfolio(symbol) {
+  const p = getPortfolios()[symbol];
+  if (!p) return;
+
+  document.getElementById('symbol').value      = p.symbol;
+  document.getElementById('initInvest').value  = p.config.initInvest;
+  document.getElementById('startPrice').value  = p.config.startPrice.toFixed(4);
+  document.getElementById('cashPct').value     = p.config.cashPct;
+  document.getElementById('resistance').value  = p.config.a;
+  document.getElementById('pcFactor').value    = p.config.b;
+  document.getElementById('mdt').value         = p.config.mdt;
+  document.getElementById('cashInt').value     = p.config.cashInt;
+  document.getElementById('csvData').value     = p.csvData || '';
+
+  // sync market condition button highlight
+  document.querySelectorAll('.condition-btn').forEach(btn => {
+    btn.classList.toggle('active', parseFloat(btn.dataset.cash) === p.config.cashPct);
+  });
+
+  liveConfig = { ...p.config };
+  livePrices = [...(p.livePrices || [])];
+  liveDates  = [...(p.liveDates  || [])];
+  aimRows    = calcAIM(livePrices, liveDates, liveConfig);
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('livePanel').style.display  = 'block';
+  document.getElementById('liveDate').value = toESTInput(new Date());
+
+  const last = aimRows[aimRows.length - 1];
+  renderSignalCard(last, liveConfig);
+  renderStatusBar(liveConfig);
+  renderStats(last, liveConfig);
+  renderCalcTable(liveConfig);
+  renderOverviewChart();
+  renderPriceChart();
+  renderPortfolioChart();
+  showTab('overview');
+
+  renderPortfolioList(symbol);
+}
+
+function deletePortfolio(symbol) {
+  if (!confirm(`Delete saved portfolio for ${symbol}?`)) return;
+  const portfolios = getPortfolios();
+  delete portfolios[symbol];
+  localStorage.setItem(STORE_KEY, JSON.stringify(portfolios));
+  renderPortfolioList();
+}
+
+function renderPortfolioList(activeSymbol) {
+  const portfolios = getPortfolios();
+  const el = document.getElementById('portfolioList');
+  const keys = Object.keys(portfolios);
+  if (!keys.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:4px 0">No saved portfolios yet.</div>';
+    return;
+  }
+  el.innerHTML = keys.map(sym => {
+    const p = portfolios[sym];
+    const date = new Date(p.savedAt).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const pts  = p.livePrices?.length || 0;
+    const isActive = sym === activeSymbol;
+    return `<div class="portfolio-item">
+      <button class="portfolio-btn${isActive ? ' active-port' : ''}" onclick="loadPortfolio('${sym}')" title="Load ${sym}">${sym}</button>
+      <span class="portfolio-meta">${pts} price${pts!==1?'s':''} · ${date}</span>
+      <button class="portfolio-del" onclick="deletePortfolio('${sym}')" title="Delete ${sym}">×</button>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
 // SCREENER HANDOFF — pre-fill ticker + price from screener.html
 // ============================================================
 (function() {
@@ -1203,6 +1324,9 @@ function initFloatScroll() {
     });
   } catch(e) {}
 })();
+
+// Populate saved portfolios on load
+renderPortfolioList();
 </script>
 </body>
 </html>
