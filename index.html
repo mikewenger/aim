@@ -684,7 +684,7 @@ function renderTransactionTable() {
       <td>${fmt$(r.price)}</td>
       <td class="${r.action==='BUY'?'up':'down'}">${fmt$(Math.abs(r.trade))}</td>
       <td class="${r.action==='BUY'?'up':'down'}">${r.action==='BUY'?'+':'-'}${fmtN(Math.abs(unitDelta),1)}</td>
-      <td>${fmtN(r.units,1)}</td>
+      <td>${fmtN(r.units,4)}</td>
       <td>${fmt$(r.PC)}</td>
       <td class="${colorClass(r.cash)}">${fmt$(r.cash)}</td>
       <td>${fmt$(r.SV)}</td>
@@ -724,7 +724,7 @@ function renderFullTable() {
       <td class="${colorClass(r.X)}">${fmt$(r.X)}</td>
       <td class="${r.trade>0?'up':r.trade<0?'down':''}">${r.trade!==0?fmt$(r.trade):''}</td>
       <td>${actionTag}</td>
-      <td>${fmtN(r.units,1)}</td>
+      <td>${fmtN(r.units,4)}</td>
       <td>${fmt$(r.PC)}</td>
       <td class="${colorClass(r.cash)}">${fmt$(r.cash)}</td>
       <td>${fmt$(r.aimPortfolio)}</td>
@@ -780,7 +780,7 @@ function renderCalcTable(config) {
       ${cellC(r.i)}
       ${cellL(`<span style="color:var(--text)">${r.date}</span>`)}
       ${cellR(`<b>${fmt$(r.price)}</b>`, 'color:var(--text)')}
-      ${cellR(fmtN(r.units, 2), 'color:#c4b5fd')}
+      ${cellR(fmtN(r.units, 4), 'color:#c4b5fd')}
       ${cellR(fmt$(r.PC), 'color:#93c5fd')}
       ${cellR(`<span style="${cColor}">${fmt$(r.cash)}</span>`)}
       ${cellR(fmt$(r.SV), 'color:#fcd34d')}
@@ -1082,7 +1082,7 @@ function renderStatusBar(config) {
     <span>Sells: <b class="down">${sells}</b></span>
     <span>PC: <b>${fmt$(last.PC)}</b></span>
     <span>Cash: <b class="${last.cash < 0 ? 'down' : ''}">${fmt$(last.cash)}</b></span>
-    <span>Units: <b>${fmtN(last.units, 0)}</b></span>
+    <span>Units: <b>${fmtN(last.units, 4)}</b></span>
   `;
 }
 
@@ -1115,7 +1115,7 @@ function renderStats(last, config) {
     <div class="stat-card">
       <div class="stat-label">Cash Reserve</div>
       <div class="stat-value ${colorClass(last.cash)}">${fmt$(last.cash)}</div>
-      <div class="stat-sub">${fmtN(last.units, 0)} units held</div>
+      <div class="stat-sub">${fmtN(last.units, 4)} units held</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Stock Value</div>
