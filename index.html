@@ -262,7 +262,7 @@
     <div>
       <div class="section-title">Saved Portfolios</div>
       <div id="portfolioList" style="margin-bottom:8px"></div>
-      <button class="btn btn-secondary" style="width:100%" onclick="savePortfolio()">💾 Save Current Portfolio</button>
+      <button class="btn btn-secondary" style="width:100%" onclick="savePortfolio(this)">💾 Save Current Portfolio</button>
     </div>
 
     <hr>
@@ -1216,7 +1216,7 @@ function getPortfolios() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
 }
 
-function savePortfolio() {
+function savePortfolio(btn) {
   const symbol = document.getElementById('symbol').value.toUpperCase().trim();
   if (!symbol) { alert('Enter a stock symbol first.'); return; }
   if (!liveConfig) { alert('Initialize the portfolio before saving.'); return; }
@@ -1234,7 +1234,6 @@ function savePortfolio() {
   renderPortfolioList(symbol);
 
   // brief green flash on the save button
-  const btn = event.currentTarget;
   const orig = btn.textContent;
   btn.textContent = '✓ Saved';
   btn.style.color = 'var(--green)';
