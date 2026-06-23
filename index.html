@@ -804,7 +804,7 @@ function renderCalcTable(config) {
       ${cellC(r.i)}
       ${cellL(`<span style="color:var(--text)">${r.date}</span>`)}
       ${cellR(`<b>${fmt$(r.price)}</b>`, 'color:var(--text)')}
-      ${cellR(fmtN(r.units, 4), 'color:#c4b5fd')}
+      ${cellR(fmtN(r.units, 0), 'color:#c4b5fd')}
       ${cellR(fmt$(r.PC), 'color:#93c5fd')}
       ${cellR(`<span style="${cColor}">${fmt$(r.cash)}</span>`)}
       ${cellR(fmt$(r.SV), 'color:#fcd34d')}
