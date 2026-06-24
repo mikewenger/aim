@@ -981,13 +981,14 @@ function renderSignalCard(last, config) {
   const math   = document.getElementById('signalMath');
   const symbol = document.getElementById('symbol').value.toUpperCase() || 'STOCK';
 
-  const SV     = last.units * last.price;
-  const X      = last.PC - SV;
+  // Use the values already computed by calcAIM for this row (pre-trade SV)
+  const SV     = last.SV;
+  const X      = last.X;
   const resist = config.a / 100 * SV;
-  const advice = Math.abs(X) - resist;
+  const advice = Math.abs(last.trade);
   const shares = Math.round(advice / last.price);
 
-  if (X > 0 && advice > config.mdt) {
+  if (last.action === 'BUY') {
     card.style.background = 'rgba(16,185,129,0.1)';
     card.style.borderColor = 'var(--green)';
     label.style.color = 'var(--green)';
@@ -997,7 +998,7 @@ function renderSignalCard(last, config) {
     detail.style.color = 'var(--green)';
     detail.textContent = `${fmt$(advice)} of ${symbol} @ ${fmt$(last.price)}`;
     math.textContent = `PC ${fmt$(last.PC)} − SV ${fmt$(SV)} = ${fmt$(X)} → |X| ${fmt$(Math.abs(X))} − resist ${fmt$(resist)} = ${fmt$(advice)}`;
-  } else if (X < 0 && advice > config.mdt) {
+  } else if (last.action === 'SELL') {
     card.style.background = 'rgba(239,68,68,0.1)';
     card.style.borderColor = 'var(--red)';
     label.style.color = 'var(--red)';
@@ -1015,9 +1016,10 @@ function renderSignalCard(last, config) {
     action.style.color = 'var(--yellow)';
     action.textContent = 'HOLD';
     detail.style.color = 'var(--yellow)';
-    const gap = config.mdt - Math.max(advice, 0);
+    const fullAdvice = Math.abs(X) - resist;
+    const gap = config.mdt - Math.max(fullAdvice, 0);
     detail.textContent = `${fmt$(gap)} away from triggering a trade`;
-    math.textContent = `PC ${fmt$(last.PC)} − SV ${fmt$(SV)} = ${fmt$(X)} → |X| ${fmt$(Math.abs(X))} − resist ${fmt$(resist)} = ${fmt$(advice)} (need > ${fmt$(config.mdt)})`;
+    math.textContent = `PC ${fmt$(last.PC)} − SV ${fmt$(SV)} = ${fmt$(X)} → |X| ${fmt$(Math.abs(X))} − resist ${fmt$(resist)} = ${fmt$(fullAdvice)} (need > ${fmt$(config.mdt)})`;
   }
 }
 
