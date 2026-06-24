@@ -1217,27 +1217,43 @@ function getPortfolios() {
 }
 
 function savePortfolio(btn) {
-  const symbol = document.getElementById('symbol').value.toUpperCase().trim();
-  if (!symbol) { alert('Enter a stock symbol first.'); return; }
-  if (!liveConfig) { alert('Initialize the portfolio before saving.'); return; }
+  try {
+    const symbol = document.getElementById('symbol').value.toUpperCase().trim();
+    if (!symbol) { alert('Enter a stock symbol first.'); return; }
 
-  const portfolios = getPortfolios();
-  portfolios[symbol] = {
-    symbol,
-    config:     liveConfig,
-    livePrices: [...livePrices],
-    liveDates:  [...liveDates],
-    csvData:    document.getElementById('csvData').value,
-    savedAt:    new Date().toISOString(),
-  };
-  localStorage.setItem(STORE_KEY, JSON.stringify(portfolios));
-  renderPortfolioList(symbol);
+    // Build config from form if not yet initialized
+    const config = liveConfig || {
+      initInvest: parseFloat(document.getElementById('initInvest').value),
+      startPrice: parseFloat(document.getElementById('startPrice').value),
+      cashPct:    parseFloat(document.getElementById('cashPct').value),
+      a:          parseFloat(document.getElementById('resistance').value),
+      b:          parseFloat(document.getElementById('pcFactor').value),
+      mdt:        parseFloat(document.getElementById('mdt').value),
+      cashInt:    parseFloat(document.getElementById('cashInt').value),
+    };
+    if (!config.initInvest || !config.startPrice) { alert('Enter Initial Investment and Starting Price before saving.'); return; }
 
-  // brief green flash on the save button
-  const orig = btn.textContent;
-  btn.textContent = '✓ Saved';
-  btn.style.color = 'var(--green)';
-  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+    const portfolios = getPortfolios();
+    portfolios[symbol] = {
+      symbol,
+      config,
+      livePrices: [...livePrices],
+      liveDates:  [...liveDates],
+      csvData:    document.getElementById('csvData').value,
+      savedAt:    new Date().toISOString(),
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(portfolios));
+    renderPortfolioList(symbol);
+
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Saved';
+      btn.style.color = 'var(--green)';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+    }
+  } catch(e) {
+    alert('Save failed: ' + e.message);
+  }
 }
 
 function loadPortfolio(symbol) {
