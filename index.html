@@ -426,10 +426,10 @@ function calcAIM(prices, dates, config) {
   const { initInvest, startPrice, cashPct, a, b, mdt, cashInt } = config;
   const monthlyInt = Math.pow(1 + cashInt / 100, 1 / 12) - 1;
   const initStock  = initInvest * (1 - cashPct / 100);
+  const initCash   = initInvest * (cashPct / 100);
   const initPrice  = startPrice;
-  const initUnits  = Math.floor(initStock / initPrice);           // whole shares only
-  const initCash   = initInvest - initUnits * initPrice;          // leftover after buying whole shares
-  const initPC     = initUnits * initPrice;                       // PC = actual stock value purchased
+  const initUnits  = initStock / initPrice;
+  const initPC     = initStock;
 
   const rows = [];
 
@@ -437,7 +437,7 @@ function calcAIM(prices, dates, config) {
   rows.push({
     i: 0, date: 'Start', price: initPrice,
     units: initUnits, PC: initPC, cash: initCash,
-    SV: initUnits * initPrice, X: 0, trade: 0, action: 'INIT',
+    SV: initStock, X: 0, trade: 0, action: 'INIT',
     aimPortfolio: initInvest,
     bhPortfolio: initInvest,
     mth: 0,
@@ -449,26 +449,22 @@ function calcAIM(prices, dates, config) {
     const price = prices[i];
     const mth = i + 1;
 
-    const SV    = price * prev.units;
-    const X     = prev.PC - SV;
-    const absX  = Math.abs(X);
+    const SV     = price * prev.units;
+    const X      = prev.PC - SV;
+    const absX   = Math.abs(X);
     const resist = a / 100 * SV;
 
     let trade = 0;
     let action = 'HOLD';
     if (X > 0 && (absX - resist) > mdt) {
-      // Buy whole shares only; actual cash spent may differ from AIM advice
-      const sharesToBuy = Math.floor((absX - resist) / price);
-      trade  = sharesToBuy * price;
-      action = sharesToBuy > 0 ? 'BUY' : 'HOLD';
+      trade  = absX - resist;
+      action = 'BUY';
     } else if (X < 0 && (absX - resist) > mdt) {
-      // Sell whole shares only
-      const sharesToSell = Math.floor((absX - resist) / price);
-      trade  = -(sharesToSell * price);
-      action = sharesToSell > 0 ? 'SELL' : 'HOLD';
+      trade  = -(absX - resist);
+      action = 'SELL';
     }
 
-    const units = prev.units + Math.round(trade / price);         // whole shares
+    const units = prev.units + trade / price;
     const PC    = prev.PC + (b / 100) * Math.max(trade, 0);
     const cash  = prev.cash * (1 + monthlyInt) - trade;
 
