@@ -263,6 +263,14 @@
       <div class="section-title">Saved Portfolios</div>
       <div id="portfolioList" style="margin-bottom:8px"></div>
       <button class="btn btn-secondary" style="width:100%" onclick="savePortfolio(this)">💾 Save Current Portfolio</button>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-secondary" style="flex:1;font-size:11px" onclick="exportPortfolios()">⬇ Export to File</button>
+        <label class="btn btn-secondary" style="flex:1;font-size:11px;cursor:pointer;text-align:center;margin:0">
+          ⬆ Import from File
+          <input type="file" accept=".json" onchange="importPortfolios(event)" style="display:none">
+        </label>
+      </div>
+      <div class="hint" style="margin-top:4px">Export saves all portfolios to a .json file on your disk so they survive browser restarts.</div>
     </div>
 
     <hr>
@@ -1212,6 +1220,39 @@ function initFloatScroll() {
 // ============================================================
 function getPortfolios() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function exportPortfolios() {
+  const data = localStorage.getItem(STORE_KEY) || '{}';
+  const blob = new Blob([data], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'aim-portfolios.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importPortfolios(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const incoming = JSON.parse(e.target.result);
+      if (typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('Invalid format');
+      // Merge with existing portfolios (imported wins on conflict)
+      const existing = getPortfolios();
+      const merged   = { ...existing, ...incoming };
+      localStorage.setItem(STORE_KEY, JSON.stringify(merged));
+      renderPortfolioList();
+      alert(`Imported ${Object.keys(incoming).length} portfolio(s) successfully.`);
+    } catch(err) {
+      alert('Import failed: ' + err.message);
+    }
+    event.target.value = ''; // reset so same file can be re-imported
+  };
+  reader.readAsText(file);
 }
 
 function savePortfolio(btn) {
