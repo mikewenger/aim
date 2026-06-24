@@ -417,6 +417,8 @@
 </div><!-- end app -->
 
 <script>
+const STORE_KEY = 'aim_portfolios';
+
 // ============================================================
 // AIM ENGINE
 // ============================================================
@@ -1210,8 +1212,6 @@ function initFloatScroll() {
 // ============================================================
 // PORTFOLIO SAVE / LOAD / DELETE
 // ============================================================
-const STORE_KEY = 'aim_portfolios';
-
 function getPortfolios() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
 }
