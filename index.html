@@ -425,7 +425,9 @@
 </div><!-- end app -->
 
 <script>
-const STORE_KEY = 'aim_portfolios';
+const STORE_KEY  = 'aim_portfolios';
+const ON_SERVER  = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+let   portfolioCache = {};
 
 // ============================================================
 // AIM ENGINE
@@ -1218,18 +1220,38 @@ function initFloatScroll() {
 // ============================================================
 // PORTFOLIO SAVE / LOAD / DELETE
 // ============================================================
-function getPortfolios() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
+function getPortfolios() { return portfolioCache; }
+
+async function syncToServer() {
+  if (ON_SERVER) {
+    try {
+      await fetch('/api/portfolios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(portfolioCache)
+      });
+    } catch(e) { console.warn('Server sync failed, falling back to localStorage', e); }
+  }
+  // Always keep localStorage in sync as backup
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(portfolioCache)); } catch(e) {}
+}
+
+async function loadPortfoliosFromServer() {
+  if (ON_SERVER) {
+    try {
+      const res = await fetch('/api/portfolios');
+      if (res.ok) { portfolioCache = await res.json(); renderPortfolioList(); return; }
+    } catch(e) { console.warn('Could not load from server, falling back to localStorage', e); }
+  }
+  try { portfolioCache = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { portfolioCache = {}; }
+  renderPortfolioList();
 }
 
 function exportPortfolios() {
-  const data = localStorage.getItem(STORE_KEY) || '{}';
-  const blob = new Blob([data], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(portfolioCache, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'aim-portfolios.json';
-  a.click();
+  a.href = url; a.download = 'aim-portfolios.json'; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -1237,20 +1259,16 @@ function importPortfolios(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     try {
       const incoming = JSON.parse(e.target.result);
       if (typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('Invalid format');
-      // Merge with existing portfolios (imported wins on conflict)
-      const existing = getPortfolios();
-      const merged   = { ...existing, ...incoming };
-      localStorage.setItem(STORE_KEY, JSON.stringify(merged));
+      portfolioCache = { ...portfolioCache, ...incoming };
+      await syncToServer();
       renderPortfolioList();
       alert(`Imported ${Object.keys(incoming).length} portfolio(s) successfully.`);
-    } catch(err) {
-      alert('Import failed: ' + err.message);
-    }
-    event.target.value = ''; // reset so same file can be re-imported
+    } catch(err) { alert('Import failed: ' + err.message); }
+    event.target.value = '';
   };
   reader.readAsText(file);
 }
@@ -1272,8 +1290,7 @@ function savePortfolio(btn) {
     };
     if (!config.initInvest || !config.startPrice) { alert('Enter Initial Investment and Starting Price before saving.'); return; }
 
-    const portfolios = getPortfolios();
-    portfolios[symbol] = {
+    portfolioCache[symbol] = {
       symbol,
       config,
       livePrices: [...livePrices],
@@ -1281,7 +1298,7 @@ function savePortfolio(btn) {
       csvData:    document.getElementById('csvData').value,
       savedAt:    new Date().toISOString(),
     };
-    localStorage.setItem(STORE_KEY, JSON.stringify(portfolios));
+    syncToServer();
     renderPortfolioList(symbol);
 
     if (btn) {
@@ -1338,9 +1355,8 @@ function loadPortfolio(symbol) {
 
 function deletePortfolio(symbol) {
   if (!confirm(`Delete saved portfolio for ${symbol}?`)) return;
-  const portfolios = getPortfolios();
-  delete portfolios[symbol];
-  localStorage.setItem(STORE_KEY, JSON.stringify(portfolios));
+  delete portfolioCache[symbol];
+  syncToServer();
   renderPortfolioList();
 }
 
@@ -1386,8 +1402,8 @@ function renderPortfolioList(activeSymbol) {
   } catch(e) {}
 })();
 
-// Populate saved portfolios on load
-renderPortfolioList();
+// Populate saved portfolios on load (from server or localStorage fallback)
+loadPortfoliosFromServer();
 </script>
 </body>
 </html>
