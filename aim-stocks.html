@@ -215,20 +215,27 @@
     <!-- Filter grid -->
     <div class="grid-3" style="margin-bottom:16px">
       <div class="field">
-        <label>Price Min ($)</label>
+        <label>Price Min (local currency)</label>
         <input type="number" id="priceMin" value="1.00" min="0" step="0.01">
-        <div class="help">Stocks below this price are excluded</div>
+        <div class="help">Applied in each market's local currency (USD, GBP, EUR…)</div>
       </div>
       <div class="field">
-        <label>Price Max ($)</label>
+        <label>Price Max (local currency)</label>
         <input type="number" id="priceMax" value="5.00" min="0" step="0.01">
-        <div class="help">Stocks above this price are excluded</div>
+        <div class="help">Applied in each market's local currency (USD, GBP, EUR…)</div>
       </div>
       <div class="field">
         <label>Min Avg Volume</label>
-        <input type="number" id="volMin" value="500000" step="100000">
-        <div class="help">Daily volume — ensures liquidity for AIM trades</div>
+        <input type="number" id="volMin" value="200000" step="100000">
+        <div class="help">Daily share volume — ensures liquidity for AIM trades</div>
       </div>
+    </div>
+
+    <!-- Country filter -->
+    <div class="field" style="margin-bottom:16px">
+      <label>Markets to Scan</label>
+      <div id="localeGrid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+      <div class="help" style="margin-top:6px">Click to toggle markets. All selected by default. Price filter uses each market's local currency.</div>
     </div>
 
     <div class="grid-4" style="margin-bottom:16px">
@@ -312,6 +319,46 @@
 
 const BASE    = 'https://api.massive.com';
 let   aborted = false;
+
+// Supported Massive.com market locales → country metadata
+const LOCALES = [
+  { code: 'us', name: 'United States',   flag: '🇺🇸', currency: 'USD' },
+  { code: 'gb', name: 'United Kingdom',  flag: '🇬🇧', currency: 'GBP' },
+  { code: 'ca', name: 'Canada',          flag: '🇨🇦', currency: 'CAD' },
+  { code: 'au', name: 'Australia',       flag: '🇦🇺', currency: 'AUD' },
+  { code: 'de', name: 'Germany',         flag: '🇩🇪', currency: 'EUR' },
+  { code: 'fr', name: 'France',          flag: '🇫🇷', currency: 'EUR' },
+  { code: 'nl', name: 'Netherlands',     flag: '🇳🇱', currency: 'EUR' },
+  { code: 'se', name: 'Sweden',          flag: '🇸🇪', currency: 'SEK' },
+  { code: 'no', name: 'Norway',          flag: '🇳🇴', currency: 'NOK' },
+  { code: 'dk', name: 'Denmark',         flag: '🇩🇰', currency: 'DKK' },
+  { code: 'fi', name: 'Finland',         flag: '🇫🇮', currency: 'EUR' },
+  { code: 'ch', name: 'Switzerland',     flag: '🇨🇭', currency: 'CHF' },
+  { code: 'jp', name: 'Japan',           flag: '🇯🇵', currency: 'JPY' },
+  { code: 'hk', name: 'Hong Kong',       flag: '🇭🇰', currency: 'HKD' },
+  { code: 'sg', name: 'Singapore',       flag: '🇸🇬', currency: 'SGD' },
+  { code: 'nz', name: 'New Zealand',     flag: '🇳🇿', currency: 'NZD' },
+  { code: 'mx', name: 'Mexico',          flag: '🇲🇽', currency: 'MXN' },
+  { code: 'br', name: 'Brazil',          flag: '🇧🇷', currency: 'BRL' },
+  { code: 'in', name: 'India',           flag: '🇮🇳', currency: 'INR' },
+  { code: 'kr', name: 'South Korea',     flag: '🇰🇷', currency: 'KRW' },
+  { code: 'it', name: 'Italy',           flag: '🇮🇹', currency: 'EUR' },
+  { code: 'es', name: 'Spain',           flag: '🇪🇸', currency: 'EUR' },
+  { code: 'pt', name: 'Portugal',        flag: '🇵🇹', currency: 'EUR' },
+  { code: 'be', name: 'Belgium',         flag: '🇧🇪', currency: 'EUR' },
+  { code: 'at', name: 'Austria',         flag: '🇦🇹', currency: 'EUR' },
+  { code: 'pl', name: 'Poland',          flag: '🇵🇱', currency: 'PLN' },
+  { code: 'za', name: 'South Africa',    flag: '🇿🇦', currency: 'ZAR' },
+  { code: 'il', name: 'Israel',          flag: '🇮🇱', currency: 'ILS' },
+  { code: 'ae', name: 'UAE',             flag: '🇦🇪', currency: 'AED' },
+  { code: 'th', name: 'Thailand',        flag: '🇹🇭', currency: 'THB' },
+  { code: 'my', name: 'Malaysia',        flag: '🇲🇾', currency: 'MYR' },
+  { code: 'id', name: 'Indonesia',       flag: '🇮🇩', currency: 'IDR' },
+  { code: 'ph', name: 'Philippines',     flag: '🇵🇭', currency: 'PHP' },
+  { code: 'tw', name: 'Taiwan',          flag: '🇹🇼', currency: 'TWD' },
+  { code: 'cn', name: 'China',           flag: '🇨🇳', currency: 'CNY' },
+];
+const LOCALE_MAP = Object.fromEntries(LOCALES.map(l => [l.code, l]));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -483,13 +530,34 @@ async function runScan() {
   try {
     // ── STEP 1: Snapshot → price + volume filter ──────────────────────────────
     stepActive(1);
-    setProgress(5, 'Step 1 — Pulling real-time snapshot…', 'Fetching all US stock tickers from Massive…');
+    // Collect selected locales
+    const selectedLocales = LOCALES.filter(l =>
+      document.querySelector(`.locale-btn[data-code="${l.code}"]`)?.classList.contains('on')
+    );
+    if (!selectedLocales.length) { showError('Select at least one market.'); finish(); return; }
 
-    const snapData = await fetchJSON(`${BASE}/v2/snapshot/locale/us/markets/stocks/tickers?include_otc=false`);
-    if (!snapData.tickers?.length) throw new Error('No snapshot data. Market may be closed or API key invalid.');
+    setProgress(5, `Step 1 — Pulling snapshots from ${selectedLocales.length} markets…`, selectedLocales.map(l => l.flag + ' ' + l.name).join('  ·  '));
 
-    // Filter by price and volume
-    let priceFiltered = snapData.tickers.filter(t => {
+    // Fetch all selected locales in parallel, tag each ticker with its locale
+    const snapResults = await Promise.all(
+      selectedLocales.map(locale =>
+        fetchJSON(`${BASE}/v2/snapshot/locale/${locale.code}/markets/stocks/tickers?include_otc=false`)
+          .then(d => ({ locale, tickers: d.tickers || [] }))
+          .catch(() => ({ locale, tickers: [] }))
+      )
+    );
+
+    const totalFetched = snapResults.reduce((s, r) => s + r.tickers.length, 0);
+    if (!totalFetched) throw new Error('No snapshot data returned. Check your API key and plan.');
+
+    // Flatten, tag with locale, filter by price + volume
+    let allTickers = [];
+    snapResults.forEach(({ locale, tickers }) => {
+      tickers.forEach(t => { t._locale = locale.code; });
+      allTickers.push(...tickers);
+    });
+
+    let priceFiltered = allTickers.filter(t => {
       const price = t.day?.c || t.lastTrade?.p || t.prevDay?.c || 0;
       const vol   = t.day?.v || t.min?.av || 0;
       return price >= priceMin && price <= priceMax && vol >= volMinVal;
@@ -504,8 +572,8 @@ async function runScan() {
     priceFiltered = priceFiltered.slice(0, maxStocks);
 
     stepDone(1);
-    setProgress(15, `Step 1 done — ${priceFiltered.length} stocks ($${priceMin}–$${priceMax}, vol ≥ ${(volMinVal/1000).toFixed(0)}k)`,
-      `Total tickers in snapshot: ${snapData.tickers.length.toLocaleString()}`);
+    setProgress(15, `Step 1 done — ${priceFiltered.length} stocks across ${selectedLocales.length} markets`,
+      `Total tickers fetched: ${totalFetched.toLocaleString()} · Price filter: ${priceMin}–${priceMax} (local currency) · Vol ≥ ${(volMinVal/1000).toFixed(0)}k`);
 
     if (aborted || !priceFiltered.length) { finish([]); return; }
     await sleep(300);
@@ -517,6 +585,7 @@ async function runScan() {
       price:       t.day?.c || t.lastTrade?.p || t.prevDay?.c || 0,
       volume:      t.day?.v || t.min?.av || 0,
       changePerc:  t.todaysChangePerc || 0,
+      locale:      t._locale || 'us',
       profitMargin: null,
       passProfit:   true,
     }));
@@ -578,7 +647,7 @@ async function runScan() {
       async c => {
         const url = `${BASE}/v2/aggs/ticker/${c.ticker}/range/1/hour/${fromStr}/${toStr}?adjusted=true&sort=asc&limit=5000`;
         const d   = await fetchJSON(url).catch(() => null);
-        return { ticker: c.ticker, bars: d?.results || [], profitMargin: c.profitMargin, price: c.price, volume: c.volume, changePerc: c.changePerc };
+        return { ticker: c.ticker, bars: d?.results || [], profitMargin: c.profitMargin, price: c.price, volume: c.volume, changePerc: c.changePerc, locale: c.locale };
       },
       8, 200,
       (done, total) => {
@@ -609,6 +678,7 @@ async function runScan() {
         volume:       r.volume,
         changePerc:   r.changePerc,
         profitMargin: r.profitMargin,
+        locale:       r.locale || 'us',
         bars:         prices.length,
         annVol:       parseFloat(annVol.toFixed(1)),
         oscScore:     parseFloat(oscScore.toFixed(2)),
@@ -645,6 +715,51 @@ function finish(results) {
   document.getElementById('stopBtn').style.display = 'none';
   if (results !== undefined) renderResults(results);
 }
+
+// ── LOCALE TOGGLE BUTTONS ────────────────────────────────────────────────────
+(function initLocaleGrid() {
+  const grid = document.getElementById('localeGrid');
+  LOCALES.forEach(l => {
+    const btn = document.createElement('button');
+    btn.className = 'locale-btn on';
+    btn.dataset.code = l.code;
+    btn.title = l.name + ' (' + l.currency + ')';
+    btn.style.cssText = 'background:var(--blue-dim);color:var(--blue);border:1px solid rgba(88,166,255,0.3);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;white-space:nowrap;transition:all 0.15s';
+    btn.innerHTML = `${l.flag} ${l.name}`;
+    btn.onclick = () => {
+      const on = btn.classList.toggle('on');
+      btn.style.background    = on ? 'var(--blue-dim)' : 'var(--surface2)';
+      btn.style.color         = on ? 'var(--blue)'     : 'var(--muted)';
+      btn.style.borderColor   = on ? 'rgba(88,166,255,0.3)' : 'var(--border)';
+    };
+    grid.appendChild(btn);
+  });
+
+  // Add Select All / None shortcuts
+  const controls = document.createElement('div');
+  controls.style.cssText = 'display:flex;gap:6px;margin-top:6px;width:100%';
+  ['All', 'None', 'Americas', 'Europe', 'Asia-Pacific'].forEach(label => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer';
+    b.onclick = () => {
+      const americas  = ['us','ca','mx','br'];
+      const europe    = ['gb','de','fr','nl','se','no','dk','fi','ch','it','es','pt','be','at','pl'];
+      const asiapac   = ['jp','hk','sg','au','nz','kr','in','th','my','id','ph','tw','cn'];
+      const other     = ['za','il','ae'];
+      const groups    = { 'Americas': americas, 'Europe': europe, 'Asia-Pacific': [...asiapac,...other] };
+      document.querySelectorAll('.locale-btn').forEach(btn => {
+        let on = label === 'All' ? true : label === 'None' ? false : groups[label]?.includes(btn.dataset.code) ?? false;
+        btn.classList.toggle('on', on);
+        btn.style.background  = on ? 'var(--blue-dim)' : 'var(--surface2)';
+        btn.style.color       = on ? 'var(--blue)'     : 'var(--muted)';
+        btn.style.borderColor = on ? 'rgba(88,166,255,0.3)' : 'var(--border)';
+      });
+    };
+    controls.appendChild(b);
+  });
+  grid.parentNode.insertBefore(controls, grid.nextSibling);
+})();
 
 // ── RENDER RESULTS ────────────────────────────────────────────────────────────
 function renderResults(results) {
@@ -684,6 +799,7 @@ function renderResults(results) {
       <thead><tr>
         <th>#</th>
         <th>Ticker</th>
+        <th>Country</th>
         <th class="r">Price</th>
         <th class="r">Avg Vol</th>
         <th class="r">Net Margin</th>
@@ -711,10 +827,12 @@ function renderResults(results) {
     const marginStr = r.profitMargin !== null ? r.profitMargin.toFixed(1)+'%' : '—';
     const marginC   = r.profitMargin === null ? 'muted' : r.profitMargin > 0 ? 'pos' : 'neg';
 
+    const loc = LOCALE_MAP[r.locale] || LOCALE_MAP['us'];
     html += `<tr>
       <td class="${rank}">${i + 1}</td>
       <td><b>${r.ticker}</b><br><span style="font-size:10px;color:var(--muted)">${chgSign}${r.changePerc.toFixed(2)}% today</span></td>
-      <td class="r">$${r.price.toFixed(4)}</td>
+      <td style="white-space:nowrap"><span style="font-size:18px;line-height:1">${loc.flag}</span><br><span style="font-size:10px;color:var(--muted)">${loc.name}</span></td>
+      <td class="r">${r.price.toFixed(4)} <span style="font-size:10px;color:var(--muted)">${loc.currency}</span></td>
       <td class="r" style="color:var(--muted)">${volStr}</td>
       <td class="r ${marginC}">${marginStr}</td>
       <td class="r pos">${r.annVol.toFixed(1)}%</td>
