@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>AIM Stocks — Lichello Scanner</title>
+<style>
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #21262d;
+    --border:   #30363d;
+    --text:     #e6edf3;
+    --muted:    #7d8590;
+    --blue:     #58a6ff;
+    --blue-dim: rgba(88,166,255,0.12);
+    --green:    #3fb950;
+    --red:      #f85149;
+    --amber:    #d29922;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body   { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; min-height: 100vh; }
+  a      { color: var(--blue); text-decoration: none; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  header h1 span { color: var(--blue); }
+  header .subtitle { color: var(--muted); font-size: 12px; }
+  .badge { background: var(--blue-dim); color: var(--blue); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: auto; }
+
+  .page-nav { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; margin-left: 12px; }
+  .page-tab { padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.15s; text-decoration: none; }
+  .page-tab.active { background: var(--blue); color: white; }
+  .page-tab:hover:not(.active) { color: var(--text); }
+
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 12px; }
+
+  label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+  textarea { resize: vertical; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .field  { display: flex; flex-direction: column; }
+
+  button.primary {
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  button.primary:hover   { opacity: 0.85; }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.danger {
+    background: rgba(248,81,73,0.15);
+    color: var(--red);
+    border: 1px solid rgba(248,81,73,0.3);
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: none;
+  }
+
+  /* Progress */
+  .prog-bar-wrap { background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; margin: 8px 0; }
+  .prog-bar      { background: var(--blue); height: 100%; width: 0%; transition: width 0.3s; }
+
+  /* Error banner */
+  .error-banner { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); border-radius: 8px; padding: 14px 16px; color: var(--red); margin-bottom: 16px; display: none; }
+
+  /* Results table */
+  .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table  { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    padding: 8px 12px;
+    text-align: left;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  thead th.r { text-align: right; }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody td.r { text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(88,166,255,0.05); }
+
+  .sig-buy  { color: var(--green); font-weight: 700; }
+  .sig-sell { color: var(--red);   font-weight: 700; }
+  .sig-hold { color: var(--muted); }
+  .pos      { color: var(--green); }
+  .neg      { color: var(--red); }
+  .rank-1   { color: #ffd700; font-weight: 700; }
+  .rank-2   { color: #c0c0c0; font-weight: 700; }
+  .rank-3   { color: #cd7f32; font-weight: 700; }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .pill-green { background: rgba(63,185,80,0.15); color: var(--green); }
+  .pill-red   { background: rgba(248,81,73,0.15);  color: var(--red); }
+  .pill-amber { background: rgba(210,153,34,0.15); color: var(--amber); }
+  .pill-blue  { background: var(--blue-dim);        color: var(--blue); }
+
+  /* Step indicators */
+  .steps { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .step  { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; color: var(--muted); }
+  .step.active { border-color: var(--blue); color: var(--blue); }
+  .step.done   { border-color: var(--green); color: var(--green); }
+
+  /* Metric tooltip */
+  .help { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+  /* Stats strip */
+  .stat-strip { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat-item  { display: flex; flex-direction: column; gap: 2px; }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat-value { font-size: 18px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AIM <span>Stocks</span></h1>
+    <div class="subtitle">Automatic Investment Management · Lichello Scanner</div>
+  </div>
+  <nav class="page-nav">
+    <a class="page-tab" href="index.html">AIM Tracker</a>
+    <a class="page-tab active" href="aim-stocks.html">AIM Stocks</a>
+  </nav>
+  <a href="screener.html" style="background:var(--blue-dim);color:var(--blue);padding:4px 10px;border-radius:5px;font-size:12px;text-decoration:none;border:1px solid rgba(59,130,246,0.3)">⚡ Screener</a>
+  <span class="badge">v1.0</span>
+</header>
+
+<div class="wrap">
+
+  <!-- ── CONTROLS ─────────────────────────────────────── -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:4px">AIM Stock Scanner</div>
+        <div style="color:var(--muted);font-size:13px">
+          Finds $1–$5 stocks that are <b style="color:var(--text)">profitable</b>, <b style="color:var(--text)">volatile</b>,
+          and <b style="color:var(--text)">predictably oscillating</b> — then backtests each through Lichello's AIM system
+          using <b style="color:var(--text)">6 months of 1-hour candles</b>.
+        </div>
+      </div>
+    </div>
+
+    <!-- API Key + run buttons -->
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end;margin-bottom:20px">
+      <div class="field">
+        <label>Massive.com API Key</label>
+        <input type="password" id="apiKey" placeholder="Paste your API key…">
+      </div>
+      <button class="primary" id="runBtn" onclick="runScan()">▶ Run Scan</button>
+      <button class="danger"  id="stopBtn" onclick="doStop()">■ Stop</button>
+    </div>
+
+    <!-- Filter grid -->
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="field">
+        <label>Price Min ($)</label>
+        <input type="number" id="priceMin" value="1.00" min="0" step="0.01">
+        <div class="help">Stocks below this price are excluded</div>
+      </div>
+      <div class="field">
+        <label>Price Max ($)</label>
+        <input type="number" id="priceMax" value="5.00" min="0" step="0.01">
+        <div class="help">Stocks above this price are excluded</div>
+      </div>
+      <div class="field">
+        <label>Min Avg Volume</label>
+        <input type="number" id="volMin" value="500000" step="100000">
+        <div class="help">Daily volume — ensures liquidity for AIM trades</div>
+      </div>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="field">
+        <label>Min Volatility (annualized %)</label>
+        <input type="number" id="volThresh" value="60" min="0" max="500">
+        <div class="help">Std dev of hourly returns × √(6.5×252). Higher = more price movement</div>
+      </div>
+      <div class="field">
+        <label>Min Oscillation Score</label>
+        <input type="number" id="oscThresh" value="2.5" min="1" step="0.1">
+        <div class="help">Sum of all price moves ÷ net move. &gt;2.5 = oscillates well for AIM</div>
+      </div>
+      <div class="field">
+        <label>Profitable Only</label>
+        <select id="profitFilter">
+          <option value="1">Yes — net margin &gt; 0%</option>
+          <option value="0">No — include all</option>
+        </select>
+        <div class="help">Requires positive net profit margin from fundamentals</div>
+      </div>
+      <div class="field">
+        <label>Max Stocks to Scan</label>
+        <input type="number" id="maxStocks" value="150" min="10" max="500">
+        <div class="help">Top N by volume from price-filtered snapshot</div>
+      </div>
+    </div>
+
+    <!-- AIM simulation params -->
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div class="section-title">AIM Backtest Parameters</div>
+      <div class="grid-5">
+        <div class="field">
+          <label>Initial Investment ($)</label>
+          <input type="number" id="invest" value="10000" min="100">
+        </div>
+        <div class="field">
+          <label>Cash Split (%)</label>
+          <input type="number" id="cashPct" value="33" min="0" max="100">
+          <div class="help">Healthy market preset (33% cash / 67% stock)</div>
+        </div>
+        <div class="field">
+          <label>Resistance a (%)</label>
+          <input type="number" id="aimA" value="10" min="0" max="50">
+        </div>
+        <div class="field">
+          <label>PC Factor b (%)</label>
+          <input type="number" id="aimB" value="10" min="0" max="50">
+        </div>
+        <div class="field">
+          <label>MDT ($)</label>
+          <input type="number" id="aimMDT" value="50" min="0">
+          <div class="help">Lower MDT suits $1–5 stocks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ERROR ──────────────────────────────────────── -->
+  <div class="error-banner" id="errBanner"></div>
+
+  <!-- ── PROGRESS ──────────────────────────────────── -->
+  <div class="card" id="progCard" style="display:none">
+    <div class="steps" id="steps">
+      <div class="step" id="step1">Step 1 — Snapshot &amp; Price Filter</div>
+      <div class="step" id="step2">Step 2 — Fundamentals (Profitable)</div>
+      <div class="step" id="step3">Step 3 — 6-Month 1h Bars · Volatility · AIM</div>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px" id="progLabel">Starting…</div>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="progBar"></div></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px" id="progSub"></div>
+  </div>
+
+  <!-- ── RESULTS ────────────────────────────────────── -->
+  <div id="results"></div>
+
+</div><!-- end wrap -->
+
+<script>
+'use strict';
+
+const BASE    = 'https://api.massive.com';
+let   aborted = false;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function apiKey() { return document.getElementById('apiKey').value.trim(); }
+
+async function fetchJSON(url) {
+  const key = apiKey();
+  const sep = url.includes('?') ? '&' : '?';
+  const full = url + sep + 'apiKey=' + encodeURIComponent(key);
+  let res;
+  try {
+    res = await fetch(full, { headers: { 'Authorization': `Bearer ${key}` } });
+  } catch(e) {
+    throw new Error('Network/CORS error — ' + e.message);
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+async function batchFetch(items, fn, size = 15, delay = 120, onProgress) {
+  const out = [];
+  for (let i = 0; i < items.length; i += size) {
+    if (aborted) break;
+    const batch   = items.slice(i, i + size);
+    const results = await Promise.all(batch.map(x => fn(x).catch(() => null)));
+    out.push(...results);
+    if (onProgress) onProgress(Math.min(i + size, items.length), items.length);
+    if (i + size < items.length) await sleep(delay);
+  }
+  return out;
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function setProgress(pct, label, sub) {
+  document.getElementById('progBar').style.width = pct + '%';
+  document.getElementById('progLabel').textContent = label;
+  document.getElementById('progSub').innerHTML = sub || '';
+}
+
+function stepActive(n)  { document.getElementById('step' + n).className = 'step active'; }
+function stepDone(n)    { document.getElementById('step' + n).className = 'step done'; }
+
+function showError(msg) {
+  const el = document.getElementById('errBanner');
+  el.style.display = '';
+  el.textContent = msg;
+}
+function hideError() { document.getElementById('errBanner').style.display = 'none'; }
+
+// ── AIM simulation ────────────────────────────────────────────────────────────
+function simulateAIM(prices, invest, cashPct, a, b, mdt) {
+  const initStock = invest * (1 - cashPct / 100);
+  const initCash  = invest * (cashPct / 100);
+
+  let units  = initStock / prices[0];
+  let PC     = initStock;
+  let cash   = initCash;
+  let trades = 0, buys = 0, sells = 0;
+
+  for (let i = 1; i < prices.length; i++) {
+    const price  = prices[i];
+    const SV     = price * units;
+    const X      = PC - SV;
+    const resist = (a / 100) * SV;
+
+    if (Math.abs(X) - resist > mdt) {
+      const tradeAmt = Math.abs(X) - resist;
+      if (X > 0) {
+        // BUY — limited by available cash
+        const actual = Math.min(tradeAmt, cash);
+        if (actual > 0) {
+          units += actual / price;
+          cash  -= actual;
+          PC    += (b / 100) * actual;
+          trades++; buys++;
+        }
+      } else {
+        // SELL — limited by stock value
+        const actual = Math.min(tradeAmt, units * price);
+        if (actual > 0) {
+          units -= actual / price;
+          cash  += actual;
+          trades++; sells++;
+        }
+      }
+    }
+  }
+
+  const lastPrice    = prices[prices.length - 1];
+  const aimPortfolio = units * lastPrice + cash;
+  const bhPortfolio  = (invest / prices[0]) * lastPrice;
+  const aimReturn    = (aimPortfolio - invest) / invest * 100;
+  const bhReturn     = (bhPortfolio  - invest) / invest * 100;
+  const alpha        = aimReturn - bhReturn;
+
+  // Current signal
+  const SV     = lastPrice * units;
+  const X      = PC - SV;
+  const resist = (a / 100) * SV;
+  let signal   = 'HOLD';
+  if (Math.abs(X) - resist > mdt) signal = X > 0 ? 'BUY' : 'SELL';
+
+  return { aimPortfolio, bhPortfolio, aimReturn, bhReturn, alpha, trades, buys, sells, signal, units, cash, PC, lastPrice };
+}
+
+// ── Volatility metrics ────────────────────────────────────────────────────────
+function calcMetrics(prices) {
+  if (prices.length < 2) return { annVol: 0, oscScore: 0 };
+
+  // Hourly log-returns
+  const rets = [];
+  let sumAbsMoves = 0;
+  for (let i = 1; i < prices.length; i++) {
+    const r = Math.log(prices[i] / prices[i - 1]);
+    rets.push(r);
+    sumAbsMoves += Math.abs(prices[i] - prices[i - 1]);
+  }
+
+  // Std dev of returns
+  const mean = rets.reduce((s, v) => s + v, 0) / rets.length;
+  const variance = rets.reduce((s, v) => s + (v - mean) ** 2, 0) / rets.length;
+  const stdHour = Math.sqrt(variance);
+
+  // Annualize: 6.5 trading hours/day × 252 trading days
+  const annVol = stdHour * Math.sqrt(6.5 * 252) * 100;
+
+  // Oscillation score: total price travel ÷ net price change
+  const netMove = Math.abs(prices[prices.length - 1] - prices[0]);
+  const minNet  = prices[0] * 0.005; // floor at 0.5% of start price to avoid div/0
+  const oscScore = sumAbsMoves / Math.max(netMove, minNet);
+
+  return { annVol, oscScore };
+}
+
+// ── MAIN SCAN ─────────────────────────────────────────────────────────────────
+async function runScan() {
+  if (!apiKey()) { showError('Please enter your Massive.com API key.'); return; }
+  hideError();
+  aborted = false;
+
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('stopBtn').style.display = '';
+  document.getElementById('progCard').style.display = '';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('step1').className = 'step';
+  document.getElementById('step2').className = 'step';
+  document.getElementById('step3').className = 'step';
+
+  const priceMin     = parseFloat(document.getElementById('priceMin').value) || 1.00;
+  const priceMax     = parseFloat(document.getElementById('priceMax').value) || 5.00;
+  const volMinVal    = parseInt(document.getElementById('volMin').value)     || 500000;
+  const volThresh    = parseFloat(document.getElementById('volThresh').value)|| 60;
+  const oscThresh    = parseFloat(document.getElementById('oscThresh').value)|| 2.5;
+  const profitOnly   = document.getElementById('profitFilter').value === '1';
+  const maxStocks    = parseInt(document.getElementById('maxStocks').value)  || 150;
+  const invest       = parseFloat(document.getElementById('invest').value)   || 10000;
+  const cashPct      = parseFloat(document.getElementById('cashPct').value)  || 33;
+  const aimA         = parseFloat(document.getElementById('aimA').value)     || 10;
+  const aimB         = parseFloat(document.getElementById('aimB').value)     || 10;
+  const aimMDT       = parseFloat(document.getElementById('aimMDT').value)   || 50;
+
+  const toDate   = new Date();
+  const fromDate = new Date(toDate);
+  fromDate.setMonth(fromDate.getMonth() - 6);
+  const fromStr  = fromDate.toISOString().split('T')[0];
+  const toStr    = toDate.toISOString().split('T')[0];
+
+  try {
+    // ── STEP 1: Snapshot → price + volume filter ──────────────────────────────
+    stepActive(1);
+    setProgress(5, 'Step 1 — Pulling real-time snapshot…', 'Fetching all US stock tickers from Massive…');
+
+    const snapData = await fetchJSON(`${BASE}/v2/snapshot/locale/us/markets/stocks/tickers?include_otc=false`);
+    if (!snapData.tickers?.length) throw new Error('No snapshot data. Market may be closed or API key invalid.');
+
+    // Filter by price and volume
+    let priceFiltered = snapData.tickers.filter(t => {
+      const price = t.day?.c || t.lastTrade?.p || t.prevDay?.c || 0;
+      const vol   = t.day?.v || t.min?.av || 0;
+      return price >= priceMin && price <= priceMax && vol >= volMinVal;
+    });
+
+    // Sort by volume descending, cap at maxStocks
+    priceFiltered.sort((a, b) => {
+      const va = a.day?.v || a.min?.av || 0;
+      const vb = b.day?.v || b.min?.av || 0;
+      return vb - va;
+    });
+    priceFiltered = priceFiltered.slice(0, maxStocks);
+
+    stepDone(1);
+    setProgress(15, `Step 1 done — ${priceFiltered.length} stocks ($${priceMin}–$${priceMax}, vol ≥ ${(volMinVal/1000).toFixed(0)}k)`,
+      `Total tickers in snapshot: ${snapData.tickers.length.toLocaleString()}`);
+
+    if (aborted || !priceFiltered.length) { finish([]); return; }
+    await sleep(300);
+
+    // ── STEP 2: Fundamentals → profitable filter ──────────────────────────────
+    stepActive(2);
+    const candidates = priceFiltered.map(t => ({
+      ticker:      t.ticker,
+      price:       t.day?.c || t.lastTrade?.p || t.prevDay?.c || 0,
+      volume:      t.day?.v || t.min?.av || 0,
+      changePerc:  t.todaysChangePerc || 0,
+      profitMargin: null,
+      passProfit:   true,
+    }));
+
+    if (profitOnly) {
+      setProgress(18, 'Step 2 — Checking fundamentals…', `Scanning ${candidates.length} tickers for profitability`);
+
+      const fundResults = await batchFetch(
+        candidates,
+        async c => {
+          const d = await fetchJSON(
+            `${BASE}/stocks/financials/v1/ratios?ticker=${c.ticker}&limit=1&sort=period_of_report.desc`
+          ).catch(() => null);
+          const r = d ? (Array.isArray(d.results) ? d.results[0] : d.results) : null;
+          return { ticker: c.ticker, ratios: r };
+        },
+        12, 150,
+        (done, total) => {
+          setProgress(18 + (done / total) * 20,
+            `Step 2 — Fundamentals ${done}/${total}…`,
+            `Checking net profit margin for profitability`);
+        }
+      );
+
+      fundResults.forEach(r => {
+        if (!r) return;
+        const c  = candidates.find(x => x.ticker === r.ticker);
+        if (!c) return;
+        const rt = r.ratios;
+        if (rt) {
+          const margin = rt.net_profit_margin ?? rt.profit_margin ?? null;
+          c.profitMargin = margin != null ? parseFloat((margin * 100).toFixed(1)) : null;
+        }
+        // If we got data and margin is not positive, fail the filter
+        if (profitOnly && c.profitMargin !== null && c.profitMargin <= 0) {
+          c.passProfit = false;
+        }
+      });
+    }
+
+    const fundPassed = candidates.filter(c => c.passProfit);
+    stepDone(2);
+    setProgress(40, `Step 2 done — ${fundPassed.length} profitable stocks`,
+      profitOnly
+        ? `Dropped ${candidates.length - fundPassed.length} unprofitable / no-data tickers`
+        : 'Profitability filter skipped');
+
+    if (aborted || !fundPassed.length) { finish([]); return; }
+    await sleep(200);
+
+    // ── STEP 3: 6-month 1h bars → volatility + AIM backtest ──────────────────
+    stepActive(3);
+    setProgress(42, `Step 3 — Fetching 6-month 1h charts for ${fundPassed.length} stocks…`, `${fromStr} → ${toStr}`);
+
+    const finalResults = [];
+
+    const histResults = await batchFetch(
+      fundPassed,
+      async c => {
+        const url = `${BASE}/v2/aggs/ticker/${c.ticker}/range/1/hour/${fromStr}/${toStr}?adjusted=true&sort=asc&limit=5000`;
+        const d   = await fetchJSON(url).catch(() => null);
+        return { ticker: c.ticker, bars: d?.results || [], profitMargin: c.profitMargin, price: c.price, volume: c.volume, changePerc: c.changePerc };
+      },
+      8, 200,
+      (done, total) => {
+        setProgress(42 + (done / total) * 55,
+          `Step 3 — Historical data ${done}/${total}…`,
+          `Running AIM simulation on each ticker`);
+      }
+    );
+
+    histResults.forEach(r => {
+      if (!r || r.bars.length < 20) return;
+
+      const prices = r.bars.map(b => b.c).filter(p => p > 0);
+      if (prices.length < 20) return;
+
+      const { annVol, oscScore } = calcMetrics(prices);
+
+      // Volatility and oscillation filters
+      if (annVol < volThresh) return;
+      if (oscScore < oscThresh) return;
+
+      // Run AIM backtest
+      const sim = simulateAIM(prices, invest, cashPct, aimA, aimB, aimMDT);
+
+      finalResults.push({
+        ticker:       r.ticker,
+        price:        r.price,
+        volume:       r.volume,
+        changePerc:   r.changePerc,
+        profitMargin: r.profitMargin,
+        bars:         prices.length,
+        annVol:       parseFloat(annVol.toFixed(1)),
+        oscScore:     parseFloat(oscScore.toFixed(2)),
+        firstPrice:   prices[0],
+        ...sim,
+      });
+    });
+
+    // Rank by alpha descending
+    finalResults.sort((a, b) => b.alpha - a.alpha);
+
+    stepDone(3);
+    setProgress(100, `Scan complete — ${finalResults.length} AIM candidates found`, '');
+
+    finish(finalResults);
+
+  } catch(err) {
+    showError('Scan error: ' + err.message);
+    console.error(err);
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('stopBtn').style.display = 'none';
+  }
+}
+
+function doStop() {
+  aborted = true;
+  setProgress(document.getElementById('progBar').style.width.replace('%', ''), 'Stopping…', '');
+  document.getElementById('stopBtn').style.display = 'none';
+}
+
+function finish(results) {
+  aborted = false;
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('stopBtn').style.display = 'none';
+  if (results !== undefined) renderResults(results);
+}
+
+// ── RENDER RESULTS ────────────────────────────────────────────────────────────
+function renderResults(results) {
+  const el = document.getElementById('results');
+  if (!results || !results.length) {
+    el.innerHTML = `<div class="card" style="color:var(--muted);text-align:center;padding:40px">
+      No stocks passed all filters. Try lowering the Oscillation or Volatility threshold.
+    </div>`;
+    return;
+  }
+
+  const best = results[0];
+
+  // Stats strip
+  const avgAlpha = (results.reduce((s, r) => s + r.alpha, 0) / results.length).toFixed(1);
+  const buys  = results.filter(r => r.signal === 'BUY').length;
+  const sells = results.filter(r => r.signal === 'SELL').length;
+  const holds = results.filter(r => r.signal === 'HOLD').length;
+
+  let html = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <div class="stat-strip">
+        <div class="stat-item"><span class="stat-label">Candidates</span><span class="stat-value">${results.length}</span></div>
+        <div class="stat-item"><span class="stat-label">Avg AIM Alpha</span><span class="stat-value ${parseFloat(avgAlpha)>=0?'pos':'neg'}">${parseFloat(avgAlpha)>=0?'+':''}${avgAlpha}%</span></div>
+        <div class="stat-item"><span class="stat-label">BUY Signals</span><span class="stat-value pos">${buys}</span></div>
+        <div class="stat-item"><span class="stat-label">SELL Signals</span><span class="stat-value neg">${sells}</span></div>
+        <div class="stat-item"><span class="stat-label">HOLD</span><span class="stat-value" style="color:var(--muted)">${holds}</span></div>
+        <div class="stat-item"><span class="stat-label">Top Pick</span><span class="stat-value" style="color:var(--blue)">${best.ticker}</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:right">
+        Ranked by AIM Alpha<br>(AIM return − B&amp;H return)<br>6-month · 1-hour bars
+      </div>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th>Ticker</th>
+        <th class="r">Price</th>
+        <th class="r">Avg Vol</th>
+        <th class="r">Net Margin</th>
+        <th class="r">Ann. Vol %</th>
+        <th class="r">Osc. Score</th>
+        <th class="r">Bars (1h)</th>
+        <th style="text-align:center">Signal</th>
+        <th class="r">AIM Return</th>
+        <th class="r">B&H Return</th>
+        <th class="r">Alpha ▼</th>
+        <th class="r">Trades (B/S)</th>
+        <th class="r">AIM Portfolio</th>
+        <th></th>
+      </tr></thead>
+      <tbody>`;
+
+  results.forEach((r, i) => {
+    const rank      = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    const sigClass  = r.signal === 'BUY' ? 'sig-buy' : r.signal === 'SELL' ? 'sig-sell' : 'sig-hold';
+    const alphaC    = r.alpha >= 0 ? 'pos' : 'neg';
+    const aimRetC   = r.aimReturn >= 0 ? 'pos' : 'neg';
+    const bhRetC    = r.bhReturn  >= 0 ? 'pos' : 'neg';
+    const chgSign   = r.changePerc >= 0 ? '+' : '';
+    const volStr    = r.volume >= 1e6 ? (r.volume/1e6).toFixed(1)+'M' : (r.volume/1e3).toFixed(0)+'K';
+    const marginStr = r.profitMargin !== null ? r.profitMargin.toFixed(1)+'%' : '—';
+    const marginC   = r.profitMargin === null ? 'muted' : r.profitMargin > 0 ? 'pos' : 'neg';
+
+    html += `<tr>
+      <td class="${rank}">${i + 1}</td>
+      <td><b>${r.ticker}</b><br><span style="font-size:10px;color:var(--muted)">${chgSign}${r.changePerc.toFixed(2)}% today</span></td>
+      <td class="r">$${r.price.toFixed(4)}</td>
+      <td class="r" style="color:var(--muted)">${volStr}</td>
+      <td class="r ${marginC}">${marginStr}</td>
+      <td class="r pos">${r.annVol.toFixed(1)}%</td>
+      <td class="r ${r.oscScore >= 4 ? 'pos' : r.oscScore >= 2.5 ? '' : 'neg'}">${r.oscScore.toFixed(2)}</td>
+      <td class="r" style="color:var(--muted)">${r.bars}</td>
+      <td style="text-align:center"><span class="${sigClass}">${r.signal}</span></td>
+      <td class="r ${aimRetC}">${r.aimReturn >= 0 ? '+' : ''}${r.aimReturn.toFixed(2)}%</td>
+      <td class="r ${bhRetC}">${r.bhReturn  >= 0 ? '+' : ''}${r.bhReturn.toFixed(2)}%</td>
+      <td class="r ${alphaC}" style="font-weight:700">${r.alpha >= 0 ? '+' : ''}${r.alpha.toFixed(2)}%</td>
+      <td class="r" style="color:var(--muted)">${r.trades} (${r.buys}B/${r.sells}S)</td>
+      <td class="r">$${r.aimPortfolio.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td><a href="index.html?ticker=${encodeURIComponent(r.ticker)}&price=${r.firstPrice.toFixed(4)}"
+            style="background:var(--blue-dim);color:var(--blue);border:1px solid rgba(88,166,255,0.3);border-radius:5px;padding:3px 8px;font-size:11px;white-space:nowrap">
+         Load →</a></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>
+
+    <div style="margin-top:12px;font-size:11px;color:var(--muted)">
+      <b>Ann. Vol %</b> — annualized volatility from hourly log-returns (std × √(6.5×252)).
+      &nbsp;&nbsp;<b>Osc. Score</b> — total price travel ÷ net price change; higher = more oscillation = better for AIM.
+      &nbsp;&nbsp;<b>Alpha</b> — AIM return minus buy-and-hold return over the 6-month period.
+    </div>
+  </div>`;
+
+  el.innerHTML = html;
+}
+</script>
+</body>
+</html>
