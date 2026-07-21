@@ -45,6 +45,19 @@
   header h1 span { color: var(--blue); }
   header .subtitle { color: var(--muted); font-size: 12px; }
   .badge { background: var(--blue-dim); color: var(--blue); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: auto; }
+  .page-nav { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; margin-left: 12px; }
+  .page-tab { padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.15s; }
+  .page-tab.active { background: var(--blue); color: white; }
+  #page-stocks .card { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+  #stocksResults table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #stocksResults th { padding: 8px 12px; text-align: left; background: var(--surface2); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #stocksResults td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #stocksResults tr:hover td { background: var(--surface2); }
+  .sig-buy { color: #34d399; font-weight: 700; }
+  .sig-sell { color: #f87171; font-weight: 700; }
+  .sig-hold { color: var(--muted); }
+  .pos { color: #34d399; }
+  .neg { color: #f87171; }
 
   /* LAYOUT */
   .app { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 53px); }
@@ -167,8 +180,12 @@
     <h1>AIM <span>Tracker</span></h1>
     <div class="subtitle">Automatic Investment Management · Lichello System</div>
   </div>
+  <nav class="page-nav">
+    <button class="page-tab active" onclick="showPage('tracker')">AIM Tracker</button>
+    <button class="page-tab" onclick="showPage('stocks')">AIM Stocks</button>
+  </nav>
   <a href="screener.html" style="background:var(--blue-dim);color:var(--blue);padding:4px 10px;border-radius:5px;font-size:12px;text-decoration:none;border:1px solid rgba(59,130,246,0.3)">⚡ Screener</a>
-  <span class="badge">v2.5</span>
+  <span class="badge">v2.6</span>
 </header>
 
 <div class="app">
@@ -423,6 +440,74 @@
     </div><!-- end livePanel -->
   </div><!-- end main -->
 </div><!-- end app -->
+
+<!-- AIM STOCKS SCANNER PAGE -->
+<div id="page-stocks" style="display:none;padding:24px;max-width:1400px;margin:0 auto">
+
+  <div class="card">
+    <div class="section-title">AIM Stocks Scanner</div>
+    <p style="color:var(--muted);font-size:13px;margin:6px 0 16px">
+      Fetches 6 months of 1-hour candles and backtests each ticker through Lichello's AIM system.
+      Stocks are ranked by AIM alpha (AIM return minus buy-and-hold return).
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end">
+      <div class="field" style="margin:0">
+        <label>Massive.com API Key</label>
+        <input type="password" id="stocksApiKey" placeholder="Paste your API key..." style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:10px 12px;font-size:13px">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Initial Investment ($)</label>
+        <input type="number" id="stocksInvest" value="10000" min="100" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:10px 12px;font-size:13px">
+      </div>
+      <button onclick="runAimScan()" id="scanBtn" style="background:var(--blue);color:white;border:none;border-radius:6px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;height:42px">
+        ▶ Run Scan
+      </button>
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>Tickers (comma-separated)</label>
+      <textarea id="stocksTickers" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:10px 12px;font-size:13px;resize:vertical">NVDA, AMD, TSLA, AAPL, META, AMZN, MSFT, GOOGL, NFLX, COIN, MARA, RIOT, SOFI, PLTR, SQ, SHOP, SNAP, ROKU, IONQ, SMCI</textarea>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px">
+      <div class="field" style="margin:0">
+        <label>Resistance a (%)</label>
+        <input type="number" id="stocksA" value="10" min="0" max="50" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px">
+      </div>
+      <div class="field" style="margin:0">
+        <label>PC Factor b (%)</label>
+        <input type="number" id="stocksB" value="10" min="0" max="50" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px">
+      </div>
+      <div class="field" style="margin:0">
+        <label>MDT ($)</label>
+        <input type="number" id="stocksMDT" value="100" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Cash Split (%)</label>
+        <input type="number" id="stocksCash" value="33" min="0" max="100" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px">
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div id="stocksProgress" style="display:none" class="card">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px" id="stocksProgressLabel">Scanning...</div>
+    <div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden">
+      <div id="stocksProgressBar" style="background:var(--blue);height:100%;width:0%;transition:width 0.3s"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px" id="stocksProgressSub"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="stocksError" style="display:none" class="card">
+    <div style="color:#f87171;font-weight:600" id="stocksErrorMsg"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="stocksResults"></div>
+
+</div>
 
 <script>
 const STORE_KEY  = 'aim_portfolios';
@@ -1404,6 +1489,212 @@ function renderPortfolioList(activeSymbol) {
 
 // Populate saved portfolios on load (from server or localStorage fallback)
 loadPortfoliosFromServer();
+
+// ── PAGE SWITCHER ────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page-tab').forEach(t => {
+    if (t.getAttribute('onclick') === `showPage('${name}')`) t.classList.add('active');
+  });
+  document.querySelector('.app').style.display      = name === 'tracker' ? '' : 'none';
+  document.getElementById('page-stocks').style.display = name === 'stocks'  ? '' : 'none';
+}
+
+// ── AIM STOCKS SCANNER ───────────────────────────────────────────────────────
+const STOCKS_BASE = 'https://api.massive.com';
+
+function simulateAIM(prices, invest, cashPct, a, b, mdt) {
+  const initStock = invest * (1 - cashPct / 100);
+  const initCash  = invest * (cashPct / 100);
+
+  let units  = initStock / prices[0];
+  let PC     = initStock;
+  let cash   = initCash;
+  let trades = 0, buys = 0, sells = 0;
+
+  for (let i = 1; i < prices.length; i++) {
+    const price  = prices[i];
+    const SV     = price * units;
+    const X      = PC - SV;
+    const resist = (a / 100) * SV;
+    const absX   = Math.abs(X);
+
+    if (absX - resist > mdt) {
+      const tradeAmt = absX - resist;
+      if (X > 0) {
+        const actual = Math.min(tradeAmt, cash);
+        if (actual > 0) {
+          units += actual / price;
+          cash  -= actual;
+          PC    += (b / 100) * actual;
+          trades++; buys++;
+        }
+      } else {
+        const actual = Math.min(tradeAmt, units * price);
+        if (actual > 0) {
+          units -= actual / price;
+          cash  += actual;
+          trades++; sells++;
+        }
+      }
+    }
+  }
+
+  const lastPrice    = prices[prices.length - 1];
+  const aimPortfolio = units * lastPrice + cash;
+  const bhPortfolio  = invest / prices[0] * lastPrice;
+  const aimReturn    = (aimPortfolio - invest) / invest * 100;
+  const bhReturn     = (bhPortfolio  - invest) / invest * 100;
+  const alpha        = aimReturn - bhReturn;
+
+  // Current AIM signal
+  const SV     = lastPrice * units;
+  const X      = PC - SV;
+  const resist = (a / 100) * SV;
+  let signal   = 'HOLD';
+  if (Math.abs(X) - resist > mdt) signal = X > 0 ? 'BUY' : 'SELL';
+
+  return { aimPortfolio, bhPortfolio, aimReturn, bhReturn, alpha, trades, buys, sells, signal, units, cash, PC };
+}
+
+async function runAimScan() {
+  const apiKey = document.getElementById('stocksApiKey').value.trim();
+  if (!apiKey) {
+    document.getElementById('stocksError').style.display    = '';
+    document.getElementById('stocksErrorMsg').textContent   = 'Please enter your Massive.com API key.';
+    return;
+  }
+  document.getElementById('stocksError').style.display    = 'none';
+  document.getElementById('stocksResults').innerHTML      = '';
+  document.getElementById('stocksProgress').style.display = '';
+  document.getElementById('scanBtn').disabled             = true;
+
+  const invest  = parseFloat(document.getElementById('stocksInvest').value) || 10000;
+  const a       = parseFloat(document.getElementById('stocksA').value)      || 10;
+  const b       = parseFloat(document.getElementById('stocksB').value)      || 10;
+  const mdt     = parseFloat(document.getElementById('stocksMDT').value)    || 100;
+  const cashPct = parseFloat(document.getElementById('stocksCash').value)   || 33;
+
+  const tickers = document.getElementById('stocksTickers').value
+    .split(/[,\s]+/).map(t => t.trim().toUpperCase()).filter(Boolean);
+
+  const toDate   = new Date();
+  const fromDate = new Date(toDate);
+  fromDate.setMonth(fromDate.getMonth() - 6);
+  const fromStr  = fromDate.toISOString().split('T')[0];
+  const toStr    = toDate.toISOString().split('T')[0];
+
+  const results = [];
+
+  for (let i = 0; i < tickers.length; i++) {
+    const ticker = tickers[i];
+    const pct    = Math.round((i / tickers.length) * 100);
+    document.getElementById('stocksProgressBar').style.width   = pct + '%';
+    document.getElementById('stocksProgressLabel').textContent = `Scanning ${ticker} (${i + 1} / ${tickers.length})…`;
+    document.getElementById('stocksProgressSub').textContent   = `${fromStr} → ${toStr} · 1-hour bars`;
+
+    try {
+      const url = `${STOCKS_BASE}/v2/aggs/ticker/${ticker}/range/1/hour/${fromStr}/${toStr}?adjusted=true&sort=asc&limit=5000&apiKey=${encodeURIComponent(apiKey)}`;
+      let res;
+      try { res = await fetch(url); }
+      catch(e) { results.push({ ticker, error: 'Network/CORS error' }); continue; }
+      if (!res.ok) { results.push({ ticker, error: `HTTP ${res.status}` }); continue; }
+      const data = await res.json();
+
+      if (!data.results || data.results.length < 10) {
+        results.push({ ticker, error: 'Insufficient data' });
+        continue;
+      }
+
+      const prices = data.results.map(r => r.c);
+      const sim    = simulateAIM(prices, invest, cashPct, a, b, mdt);
+      results.push({ ticker, bars: data.results.length, currentPrice: prices[prices.length - 1], firstPrice: prices[0], ...sim });
+    } catch(e) {
+      results.push({ ticker, error: e.message });
+    }
+  }
+
+  document.getElementById('stocksProgressBar').style.width   = '100%';
+  document.getElementById('stocksProgressLabel').textContent = 'Scan complete.';
+  document.getElementById('scanBtn').disabled = false;
+
+  // Sort by alpha descending
+  results.sort((x, y) => (y.alpha || -999) - (x.alpha || -999));
+
+  renderScanResults(results, invest);
+}
+
+function renderScanResults(results, invest) {
+  const ok  = results.filter(r => !r.error);
+  const bad = results.filter(r =>  r.error);
+
+  let html = `<div class="card">`;
+  html += `<div class="section-title" style="margin-bottom:12px">Results — ${ok.length} stocks · ranked by AIM alpha</div>`;
+
+  if (ok.length) {
+    html += `<div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th>Ticker</th>
+        <th>Bars (1h)</th>
+        <th>Entry Price</th>
+        <th>Current Price</th>
+        <th>Signal</th>
+        <th>AIM Return</th>
+        <th>B&H Return</th>
+        <th>Alpha</th>
+        <th>Trades (B/S)</th>
+        <th>AIM Portfolio</th>
+        <th>B&H Portfolio</th>
+        <th></th>
+      </tr></thead><tbody>`;
+
+    for (const r of ok) {
+      const sigClass = r.signal === 'BUY' ? 'sig-buy' : r.signal === 'SELL' ? 'sig-sell' : 'sig-hold';
+      const alphaClass = r.alpha >= 0 ? 'pos' : 'neg';
+      const aimRetClass = r.aimReturn >= 0 ? 'pos' : 'neg';
+      const bhRetClass  = r.bhReturn  >= 0 ? 'pos' : 'neg';
+      const priceDelta  = ((r.currentPrice - r.firstPrice) / r.firstPrice * 100).toFixed(1);
+
+      html += `<tr>
+        <td><b>${r.ticker}</b></td>
+        <td style="color:var(--muted)">${r.bars}</td>
+        <td>$${r.firstPrice.toFixed(4)}</td>
+        <td>$${r.currentPrice.toFixed(4)} <span style="font-size:11px;color:${parseFloat(priceDelta)>=0?'#34d399':'#f87171'}">${parseFloat(priceDelta)>=0?'+':''}${priceDelta}%</span></td>
+        <td class="${sigClass}">${r.signal}</td>
+        <td class="${aimRetClass}">${r.aimReturn >= 0 ? '+' : ''}${r.aimReturn.toFixed(2)}%</td>
+        <td class="${bhRetClass}">${r.bhReturn >= 0 ? '+' : ''}${r.bhReturn.toFixed(2)}%</td>
+        <td class="${alphaClass}" style="font-weight:700">${r.alpha >= 0 ? '+' : ''}${r.alpha.toFixed(2)}%</td>
+        <td style="color:var(--muted)">${r.trades} (${r.buys}B / ${r.sells}S)</td>
+        <td>$${r.aimPortfolio.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+        <td>$${r.bhPortfolio.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+        <td><button onclick="loadScanTicker('${r.ticker}','${r.currentPrice.toFixed(4)}','${r.firstPrice.toFixed(4)}')"
+          style="background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,0.3);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer">
+          Load →</button></td>
+      </tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
+
+  if (bad.length) {
+    html += `<div style="margin-top:12px;font-size:12px;color:var(--muted)">
+      <b>Skipped:</b> ${bad.map(r => `${r.ticker} (${r.error})`).join(', ')}
+    </div>`;
+  }
+
+  html += `</div>`;
+  document.getElementById('stocksResults').innerHTML = html;
+}
+
+function loadScanTicker(ticker, currentPrice, firstPrice) {
+  // Pre-fill the AIM Tracker form and switch page
+  document.getElementById('symbol').value     = ticker;
+  document.getElementById('startPrice').value = firstPrice;
+  showPage('tracker');
+  // Flash the symbol field
+  const el = document.getElementById('symbol');
+  el.style.borderColor = 'var(--blue)';
+  setTimeout(() => { el.style.borderColor = ''; }, 1200);
+}
 </script>
 </body>
 </html>
